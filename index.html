@@ -7,23 +7,9 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><text x='50%' y='55%' font-size='12' font-family='monospace' font-weight='bold' text-anchor='middle' fill='white' dominant-baseline='middle'>M</text></svg>">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background: #000;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-            font-family: 'Press Start 2P', monospace;
-        }
-
-        canvas {
-            display: block;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
+        body { background: #000; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Press Start 2P', monospace; }
+        canvas { display: block; position: fixed; top: 0; left: 0; }
     </style>
 </head>
 <body>
@@ -62,14 +48,8 @@
 
         var stars = [];
         var visitors = [];
-        var rocket = {
-            x: width / 2, y: height * 0.8,
-            targetY: height * 0.15, arrived: false,
-            trail: [], wobble: 0
-        };
 
-        // Мелкие звёзды фона
-        for (var i = 0; i < 300; i++) {
+        for (var i = 0; i < 350; i++) {
             stars.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
@@ -95,14 +75,11 @@
                 isMe: data.id === visitorId,
                 x: data.x || Math.random() * (width - 100) + 50,
                 y: data.y || Math.random() * (height - 200) + 100,
-                sx: data.sx || (Math.random() - 0.5) * 0.4,
-                sy: data.sy || (Math.random() - 0.5) * 0.3,
-                size: data.id === visitorId ? 48 : 24 + Math.random() * 20,
+                sx: data.sx || (Math.random() - 0.5) * 0.5,
+                sy: data.sy || (Math.random() - 0.5) * 0.4,
+                size: data.id === visitorId ? 50 : 22 + Math.random() * 22,
                 lastSeen: data.lastSeen || Date.now(),
-                pulse: Math.random() * 6.28,
-                orbitAngle: Math.random() * 6.28,
-                orbitSpeed: 0.0002 + Math.random() * 0.0005,
-                orbitRadius: 0.3 + Math.random() * 0.5
+                pulse: Math.random() * 6.28
             };
         }
 
@@ -110,31 +87,30 @@
             v.x += v.sx;
             v.y += v.sy;
 
-            // Отскок от краёв
             if (v.x < v.size + 10 || v.x > width - v.size - 10) v.sx *= -1;
             if (v.y < v.size + 10 || v.y > height - v.size - 50) v.sy *= -1;
 
             var pulse = 1 + Math.sin(Date.now() * 0.003 + v.pulse) * 0.06;
             var r = v.size * pulse;
 
-            // Орбитальное кольцо
-            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.3)' : 'rgba(255, 255, 255, 0.08)';
+            // Кольцо орбиты
+            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(v.x, v.y, r + 8, 0, Math.PI * 2);
+            ctx.arc(v.x, v.y, r + 10, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Тонкое кольцо как у Сатурна
-            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+            // Кольцо Сатурна
+            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)';
             ctx.lineWidth = 0.5;
             ctx.beginPath();
-            ctx.ellipse(v.x, v.y, r + 14, r * 0.25, 0.3, 0, Math.PI * 2);
+            ctx.ellipse(v.x, v.y, r + 16, r * 0.2, 0.4, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Тень планеты
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            // Тень
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.beginPath();
-            ctx.arc(v.x + 2, v.y + 2, r, 0, Math.PI * 2);
+            ctx.arc(v.x + 3, v.y + 3, r, 0, Math.PI * 2);
             ctx.fill();
 
             // Планета
@@ -149,46 +125,58 @@
                 var grad = ctx.createRadialGradient(v.x - r * 0.3, v.y - r * 0.3, r * 0.1, v.x, v.y, r);
                 if (v.isMe) {
                     grad.addColorStop(0, '#ffffff');
-                    grad.addColorStop(0.5, '#4a90d9');
-                    grad.addColorStop(1, '#1a3a5c');
+                    grad.addColorStop(0.4, '#6ab0ff');
+                    grad.addColorStop(1, '#0d2b4a');
                 } else {
-                    grad.addColorStop(0, '#cccccc');
-                    grad.addColorStop(0.5, '#666666');
-                    grad.addColorStop(1, '#222222');
+                    var hues = ['#aaa', '#888', '#999', '#bbb', '#777'];
+                    var c = hues[Math.floor(Math.random() * hues.length)];
+                    grad.addColorStop(0, '#ddd');
+                    grad.addColorStop(0.5, c);
+                    grad.addColorStop(1, '#333');
                 }
                 ctx.fillStyle = grad;
                 ctx.fillRect(v.x - r, v.y - r, r * 2, r * 2);
 
-                // Буква внутри
                 ctx.fillStyle = '#fff';
-                ctx.font = (r * 0.8) + 'px "Press Start 2P"';
+                ctx.font = (r * 0.7) + 'px "Press Start 2P"';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(v.name.charAt(0).toUpperCase(), v.x, v.y);
             }
             ctx.restore();
 
+            // Свечение для своей планеты
+            if (v.isMe) {
+                var glow = ctx.createRadialGradient(v.x, v.y, r * 0.8, v.x, v.y, r * 2);
+                glow.addColorStop(0, 'rgba(68, 170, 255, 0.3)');
+                glow.addColorStop(1, 'rgba(68, 170, 255, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(v.x, v.y, r * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
             // Ник
             ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200, 200, 200, 0.8)';
-            ctx.font = (v.isMe ? 9 : 7) + 'px "Press Start 2P"';
+            ctx.font = (v.isMe ? 10 : 7) + 'px "Press Start 2P"';
             ctx.textAlign = 'center';
-            ctx.fillText(v.nick, v.x, v.y + r + 14);
+            ctx.fillText(v.nick, v.x, v.y + r + 16);
 
-            // Последний заход
+            // Время захода
             var timeAgo = getTimeAgo(v.lastSeen);
-            ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+            ctx.fillStyle = 'rgba(150, 150, 150, 0.5)';
             ctx.font = '6px "Press Start 2P"';
             ctx.textAlign = 'center';
-            ctx.fillText(timeAgo, v.x, v.y + r + 26);
+            ctx.fillText(timeAgo, v.x, v.y + r + 28);
         }
 
         function getTimeAgo(timestamp) {
             var seconds = Math.floor((Date.now() - timestamp) / 1000);
             if (seconds < 10) return 'сейчас';
-            if (seconds < 60) return seconds + 'с';
-            if (seconds < 3600) return Math.floor(seconds / 60) + 'м';
-            if (seconds < 86400) return Math.floor(seconds / 3600) + 'ч';
-            return Math.floor(seconds / 86400) + 'д';
+            if (seconds < 60) return seconds + 'с назад';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'м назад';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'ч назад';
+            return Math.floor(seconds / 86400) + 'д назад';
         }
 
         function loadVisitors() {
@@ -203,7 +191,6 @@
                     var all = json.visitors || [];
                     var now = Date.now();
                     var alive = all.filter(function(v) { return now - v.lastSeen < 300000; });
-                    // Сохраняем позиции существующих
                     var oldPos = {};
                     visitors.forEach(function(v) {
                         oldPos[v.id] = { x: v.x, y: v.y, sx: v.sx, sy: v.sy };
@@ -255,91 +242,33 @@
                 .catch(function() {});
         }
 
-        // ===== ОТРИСОВКА =====
         function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.fillRect(0, 0, width, height);
 
-            // Звёзды
             for (var i = 0; i < stars.length; i++) {
                 var s = stars[i];
-                var o = s.opacity * (0.5 + 0.5 * Math.sin(Date.now() * s.speed + s.offset));
+                var o = s.opacity * (0.4 + 0.6 * Math.sin(Date.now() * s.speed + s.offset));
                 ctx.fillStyle = 'rgba(255, 255, 255, ' + o + ')';
                 ctx.fillRect(s.x, s.y, s.size, s.size);
             }
 
             // Туманности
-            var t1 = ctx.createRadialGradient(width * 0.7, height * 0.3, 0, width * 0.7, height * 0.3, 200);
-            t1.addColorStop(0, 'rgba(30, 30, 80, 0.06)');
+            var t1 = ctx.createRadialGradient(width * 0.7, height * 0.3, 0, width * 0.7, height * 0.3, 250);
+            t1.addColorStop(0, 'rgba(30, 30, 80, 0.04)');
             t1.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = t1;
             ctx.fillRect(0, 0, width, height);
 
-            var t2 = ctx.createRadialGradient(width * 0.2, height * 0.7, 0, width * 0.2, height * 0.7, 150);
-            t2.addColorStop(0, 'rgba(80, 20, 40, 0.05)');
+            var t2 = ctx.createRadialGradient(width * 0.2, height * 0.7, 0, width * 0.2, height * 0.7, 200);
+            t2.addColorStop(0, 'rgba(60, 15, 30, 0.04)');
             t2.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = t2;
             ctx.fillRect(0, 0, width, height);
 
-            // Посетители
             for (var i = 0; i < visitors.length; i++) {
                 drawVisitor(visitors[i]);
             }
-
-            // Ракета
-            if (!rocket.arrived && rocket.y > rocket.targetY) {
-                rocket.y -= 0.7;
-                rocket.wobble += 0.1;
-                rocket.trail.push({
-                    x: rocket.x + Math.sin(rocket.wobble) * 3 + (Math.random() - 0.5) * 6,
-                    y: rocket.y + 14, opacity: 0.9, size: 2 + Math.random() * 3
-                });
-            } else {
-                rocket.arrived = true;
-                rocket.y += Math.sin(Date.now() * 0.0008) * 0.4;
-                rocket.x += Math.cos(Date.now() * 0.0006) * 0.3;
-            }
-            for (var i = 0; i < rocket.trail.length; i++) {
-                rocket.trail[i].opacity -= 0.012;
-                rocket.trail[i].y += 0.4;
-            }
-            rocket.trail = rocket.trail.filter(function(t) { return t.opacity > 0; });
-
-            // Огонь ракеты
-            if (!rocket.arrived) {
-                for (var i = 0; i < 2; i++) {
-                    var f = 10 + Math.random() * 14;
-                    var ox = (Math.random() - 0.5) * 4;
-                    ctx.fillStyle = i === 0 ? '#ffd700' : '#ff6b35';
-                    ctx.beginPath();
-                    ctx.moveTo(rocket.x - 4 + ox, rocket.y + 10);
-                    ctx.lineTo(rocket.x + ox, rocket.y + 16 + f);
-                    ctx.lineTo(rocket.x + 4 + ox, rocket.y + 10);
-                    ctx.fill();
-                }
-            }
-
-            for (var i = 0; i < rocket.trail.length; i++) {
-                ctx.fillStyle = 'rgba(255, 200, 50, ' + rocket.trail[i].opacity + ')';
-                ctx.fillRect(rocket.trail[i].x - rocket.trail[i].size, rocket.trail[i].y - rocket.trail[i].size, rocket.trail[i].size * 2, rocket.trail[i].size * 2);
-            }
-
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(rocket.x - 5, rocket.y - 8, 10, 20);
-            ctx.fillStyle = '#ff4444';
-            ctx.beginPath();
-            ctx.moveTo(rocket.x - 5, rocket.y - 8);
-            ctx.lineTo(rocket.x, rocket.y - 16);
-            ctx.lineTo(rocket.x + 5, rocket.y - 8);
-            ctx.fill();
-            ctx.fillStyle = '#4af';
-            ctx.fillRect(rocket.x - 2, rocket.y, 4, 4);
-            ctx.fillStyle = '#888';
-            ctx.fillRect(rocket.x - 9, rocket.y + 6, 4, 6);
-            ctx.fillRect(rocket.x + 5, rocket.y + 6, 4, 6);
-            ctx.fillStyle = '#fff';
-            ctx.font = '3px "Press Start 2P"';
-            ctx.fillText('MANTI', rocket.x - 14, rocket.y - 12);
 
             requestAnimationFrame(draw);
         }
