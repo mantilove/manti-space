@@ -6,28 +6,34 @@
     <title>Manti Space</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><text x='50%' y='55%' font-size='12' font-family='monospace' font-weight='bold' text-anchor='middle' fill='white' dominant-baseline='middle'>M</text></svg>">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000; overflow: hidden; height: 100vh; width: 100vw; }
-        canvas { display: block; position: fixed; top: 0; left: 0; }
-        p {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 10px; font-family: monospace;
-            z-index: 2; pointer-events: none;
+
+        body {
+            background: #000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
     </style>
 </head>
 <body>
     <canvas id="s"></canvas>
-    <p id="counter">🚀 MANTI SPACE</p>
 
     <script>
     (function() {
-        // ===== GIST =====
         var GIST_ID = 'ff30590bbffd3ddd496ceda0c8b5b1a8';
         var GIST_URL = 'https://api.github.com/gists/' + GIST_ID;
-        var GIST_TOKEN = ''; // Оставь пустым для публичного gist
 
-        // ===== ПОЛУЧИТЬ ИМЯ (из Telegram или гость) =====
         var visitorName = 'Гость';
         var visitorNick = 'Гость';
         var visitorPhoto = null;
@@ -47,7 +53,6 @@
             }
         } catch(e) {}
 
-        // ===== CANVAS =====
         var canvas = document.getElementById('s');
         var ctx = canvas.getContext('2d');
         var width = window.innerWidth;
@@ -56,30 +61,25 @@
         canvas.height = height;
 
         var stars = [];
-        var meteors = [];
         var visitors = [];
         var rocket = {
             x: width / 2, y: height * 0.8,
-            targetY: height * 0.1, arrived: false,
+            targetY: height * 0.15, arrived: false,
             trail: [], wobble: 0
         };
 
-        for (var i = 0; i < 200; i++) {
+        // Мелкие звёзды фона
+        for (var i = 0; i < 300; i++) {
             stars.push({
-                x: Math.random() * width, y: Math.random() * height,
-                size: Math.random() * 2, opacity: Math.random(),
-                speed: Math.random() * 0.01, offset: Math.random() * 100
-            });
-        }
-        for (var i = 0; i < 5; i++) {
-            meteors.push({
-                x: Math.random() * width, y: Math.random() * height,
-                speed: 3 + Math.random() * 5, angle: (Math.random() - 0.5) * 0.3,
-                length: 10 + Math.random() * 20
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: Math.random() * 2.5,
+                opacity: Math.random(),
+                speed: Math.random() * 0.008,
+                offset: Math.random() * 100
             });
         }
 
-        // ===== АВАТАРКА ПОСЕТИТЕЛЯ =====
         function createVisitor(data) {
             var img = null;
             if (data.photo) {
@@ -87,50 +87,110 @@
                 img.src = data.photo;
             }
             return {
-                id: data.id, name: data.name, nick: data.nick,
-                photo: data.photo, img: img, isMe: data.id === visitorId,
-                x: data.x || Math.random() * width,
-                y: data.y || Math.random() * height,
-                sx: data.sx || (Math.random() - 0.5) * 0.5,
+                id: data.id,
+                name: data.name,
+                nick: data.nick,
+                photo: data.photo,
+                img: img,
+                isMe: data.id === visitorId,
+                x: data.x || Math.random() * (width - 100) + 50,
+                y: data.y || Math.random() * (height - 200) + 100,
+                sx: data.sx || (Math.random() - 0.5) * 0.4,
                 sy: data.sy || (Math.random() - 0.5) * 0.3,
-                size: data.id === visitorId ? 45 : 20 + Math.random() * 20,
-                pulse: Math.random() * 6.28
+                size: data.id === visitorId ? 48 : 24 + Math.random() * 20,
+                lastSeen: data.lastSeen || Date.now(),
+                pulse: Math.random() * 6.28,
+                orbitAngle: Math.random() * 6.28,
+                orbitSpeed: 0.0002 + Math.random() * 0.0005,
+                orbitRadius: 0.3 + Math.random() * 0.5
             };
         }
 
         function drawVisitor(v) {
-            var pulse = 1 + Math.sin(Date.now() * 0.003 + v.pulse) * 0.08;
-            v.x += v.sx; v.y += v.sy;
-            if (v.x < v.size || v.x > width - v.size) v.sx *= -1;
-            if (v.y < v.size || v.y > height - v.size) v.sy *= -1;
+            v.x += v.sx;
+            v.y += v.sy;
 
-            ctx.save();
-            ctx.translate(v.x, v.y);
-            if (v.isMe) { ctx.shadowColor = '#4af'; ctx.shadowBlur = 20; }
+            // Отскок от краёв
+            if (v.x < v.size + 10 || v.x > width - v.size - 10) v.sx *= -1;
+            if (v.y < v.size + 10 || v.y > height - v.size - 50) v.sy *= -1;
+
+            var pulse = 1 + Math.sin(Date.now() * 0.003 + v.pulse) * 0.06;
+            var r = v.size * pulse;
+
+            // Орбитальное кольцо
+            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.3)' : 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(0, 0, v.size * pulse, 0, Math.PI * 2);
+            ctx.arc(v.x, v.y, r + 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Тонкое кольцо как у Сатурна
+            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.ellipse(v.x, v.y, r + 14, r * 0.25, 0.3, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Тень планеты
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.arc(v.x + 2, v.y + 2, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Планета
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(v.x, v.y, r, 0, Math.PI * 2);
             ctx.clip();
 
             if (v.img && v.img.complete && v.img.naturalWidth > 0) {
-                ctx.drawImage(v.img, -v.size * pulse, -v.size * pulse, v.size * 2 * pulse, v.size * 2 * pulse);
+                ctx.drawImage(v.img, v.x - r, v.y - r, r * 2, r * 2);
             } else {
-                ctx.fillStyle = v.isMe ? '#fff' : '#555';
-                ctx.fillRect(-v.size * pulse, -v.size * pulse, v.size * 2 * pulse, v.size * 2 * pulse);
-                ctx.fillStyle = '#000';
-                ctx.font = (v.size * 0.7) + 'px monospace';
+                var grad = ctx.createRadialGradient(v.x - r * 0.3, v.y - r * 0.3, r * 0.1, v.x, v.y, r);
+                if (v.isMe) {
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.5, '#4a90d9');
+                    grad.addColorStop(1, '#1a3a5c');
+                } else {
+                    grad.addColorStop(0, '#cccccc');
+                    grad.addColorStop(0.5, '#666666');
+                    grad.addColorStop(1, '#222222');
+                }
+                ctx.fillStyle = grad;
+                ctx.fillRect(v.x - r, v.y - r, r * 2, r * 2);
+
+                // Буква внутри
+                ctx.fillStyle = '#fff';
+                ctx.font = (r * 0.8) + 'px "Press Start 2P"';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(v.name.charAt(0).toUpperCase(), 0, 1);
+                ctx.fillText(v.name.charAt(0).toUpperCase(), v.x, v.y);
             }
             ctx.restore();
 
-            ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200,200,200,0.7)';
-            ctx.font = (v.isMe ? 8 : 6) + 'px monospace';
+            // Ник
+            ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200, 200, 200, 0.8)';
+            ctx.font = (v.isMe ? 9 : 7) + 'px "Press Start 2P"';
             ctx.textAlign = 'center';
-            ctx.fillText(v.nick, v.x, v.y + v.size + 12);
+            ctx.fillText(v.nick, v.x, v.y + r + 14);
+
+            // Последний заход
+            var timeAgo = getTimeAgo(v.lastSeen);
+            ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+            ctx.font = '6px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText(timeAgo, v.x, v.y + r + 26);
         }
 
-        // ===== GIST API =====
+        function getTimeAgo(timestamp) {
+            var seconds = Math.floor((Date.now() - timestamp) / 1000);
+            if (seconds < 10) return 'сейчас';
+            if (seconds < 60) return seconds + 'с';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'м';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'ч';
+            return Math.floor(seconds / 86400) + 'д';
+        }
+
         function loadVisitors() {
             fetch(GIST_URL)
                 .then(function(r) { return r.json(); })
@@ -142,23 +202,27 @@
                 .then(function(json) {
                     var all = json.visitors || [];
                     var now = Date.now();
-                    var alive = all.filter(function(v) { return now - v.lastSeen < 120000; });
+                    var alive = all.filter(function(v) { return now - v.lastSeen < 300000; });
+                    // Сохраняем позиции существующих
+                    var oldPos = {};
+                    visitors.forEach(function(v) {
+                        oldPos[v.id] = { x: v.x, y: v.y, sx: v.sx, sy: v.sy };
+                    });
                     visitors = [];
                     alive.forEach(function(v) {
+                        var pos = oldPos[v.id];
+                        if (pos) { v.x = pos.x; v.y = pos.y; v.sx = pos.sx; v.sy = pos.sy; }
                         visitors.push(createVisitor(v));
                     });
-                    // Добавляем себя если нет
                     if (!visitors.find(function(v) { return v.id === visitorId; })) {
                         visitors.push(createVisitor({
                             id: visitorId, name: visitorName,
-                            nick: visitorNick, photo: visitorPhoto
+                            nick: visitorNick, photo: visitorPhoto,
+                            lastSeen: Date.now()
                         }));
                     }
-                    document.getElementById('counter').textContent = '👾 ' + visitors.length;
                 })
-                .catch(function() {
-                    document.getElementById('counter').textContent = '🚀 MANTI SPACE';
-                });
+                .catch(function() {});
         }
 
         function updateMe() {
@@ -170,7 +234,7 @@
                 .then(function(data) {
                     var all = JSON.parse(data.files['visitors.json'].content);
                     var now = Date.now();
-                    all.visitors = all.visitors.filter(function(v) { return now - v.lastSeen < 120000; });
+                    all.visitors = all.visitors.filter(function(v) { return now - v.lastSeen < 300000; });
                     var idx = all.visitors.findIndex(function(v) { return v.id === visitorId; });
                     var vd = {
                         id: visitorId, name: visitorName, nick: visitorNick,
@@ -193,39 +257,42 @@
 
         // ===== ОТРИСОВКА =====
         function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
             ctx.fillRect(0, 0, width, height);
 
+            // Звёзды
             for (var i = 0; i < stars.length; i++) {
                 var s = stars[i];
                 var o = s.opacity * (0.5 + 0.5 * Math.sin(Date.now() * s.speed + s.offset));
-                ctx.fillStyle = 'rgba(255,255,255,' + o + ')';
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + o + ')';
                 ctx.fillRect(s.x, s.y, s.size, s.size);
             }
 
-            for (var i = 0; i < meteors.length; i++) {
-                var m = meteors[i];
-                m.y += m.speed; m.x += m.angle;
-                if (m.y > height + 20 || m.x < -20 || m.x > width + 20) {
-                    m.y = -10; m.x = Math.random() * width;
-                }
-                ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(m.x, m.y);
-                ctx.lineTo(m.x - m.angle * m.length, m.y - m.length);
-                ctx.stroke();
-                ctx.fillStyle = '#fff'; ctx.fillRect(m.x, m.y, 2, 2);
-            }
+            // Туманности
+            var t1 = ctx.createRadialGradient(width * 0.7, height * 0.3, 0, width * 0.7, height * 0.3, 200);
+            t1.addColorStop(0, 'rgba(30, 30, 80, 0.06)');
+            t1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = t1;
+            ctx.fillRect(0, 0, width, height);
 
+            var t2 = ctx.createRadialGradient(width * 0.2, height * 0.7, 0, width * 0.2, height * 0.7, 150);
+            t2.addColorStop(0, 'rgba(80, 20, 40, 0.05)');
+            t2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = t2;
+            ctx.fillRect(0, 0, width, height);
+
+            // Посетители
             for (var i = 0; i < visitors.length; i++) {
                 drawVisitor(visitors[i]);
             }
 
+            // Ракета
             if (!rocket.arrived && rocket.y > rocket.targetY) {
-                rocket.y -= 0.7; rocket.wobble += 0.1;
+                rocket.y -= 0.7;
+                rocket.wobble += 0.1;
                 rocket.trail.push({
                     x: rocket.x + Math.sin(rocket.wobble) * 3 + (Math.random() - 0.5) * 6,
-                    y: rocket.y + 14, opacity: 0.9
+                    y: rocket.y + 14, opacity: 0.9, size: 2 + Math.random() * 3
                 });
             } else {
                 rocket.arrived = true;
@@ -237,31 +304,42 @@
                 rocket.trail[i].y += 0.4;
             }
             rocket.trail = rocket.trail.filter(function(t) { return t.opacity > 0; });
-            for (var i = 0; i < rocket.trail.length; i++) {
-                ctx.fillStyle = 'rgba(255,200,50,' + rocket.trail[i].opacity + ')';
-                ctx.fillRect(rocket.trail[i].x - 2, rocket.trail[i].y - 2, 4, 4);
-            }
+
+            // Огонь ракеты
             if (!rocket.arrived) {
-                ctx.fillStyle = '#ff6b35';
-                ctx.beginPath();
-                ctx.moveTo(rocket.x - 5, rocket.y + 10);
-                ctx.lineTo(rocket.x, rocket.y + 22);
-                ctx.lineTo(rocket.x + 5, rocket.y + 10);
-                ctx.fill();
+                for (var i = 0; i < 2; i++) {
+                    var f = 10 + Math.random() * 14;
+                    var ox = (Math.random() - 0.5) * 4;
+                    ctx.fillStyle = i === 0 ? '#ffd700' : '#ff6b35';
+                    ctx.beginPath();
+                    ctx.moveTo(rocket.x - 4 + ox, rocket.y + 10);
+                    ctx.lineTo(rocket.x + ox, rocket.y + 16 + f);
+                    ctx.lineTo(rocket.x + 4 + ox, rocket.y + 10);
+                    ctx.fill();
+                }
             }
-            ctx.fillStyle = '#e0e0e0'; ctx.fillRect(rocket.x - 5, rocket.y - 8, 10, 20);
+
+            for (var i = 0; i < rocket.trail.length; i++) {
+                ctx.fillStyle = 'rgba(255, 200, 50, ' + rocket.trail[i].opacity + ')';
+                ctx.fillRect(rocket.trail[i].x - rocket.trail[i].size, rocket.trail[i].y - rocket.trail[i].size, rocket.trail[i].size * 2, rocket.trail[i].size * 2);
+            }
+
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(rocket.x - 5, rocket.y - 8, 10, 20);
             ctx.fillStyle = '#ff4444';
             ctx.beginPath();
             ctx.moveTo(rocket.x - 5, rocket.y - 8);
             ctx.lineTo(rocket.x, rocket.y - 16);
             ctx.lineTo(rocket.x + 5, rocket.y - 8);
             ctx.fill();
-            ctx.fillStyle = '#4af'; ctx.fillRect(rocket.x - 2, rocket.y, 4, 4);
+            ctx.fillStyle = '#4af';
+            ctx.fillRect(rocket.x - 2, rocket.y, 4, 4);
             ctx.fillStyle = '#888';
             ctx.fillRect(rocket.x - 9, rocket.y + 6, 4, 6);
             ctx.fillRect(rocket.x + 5, rocket.y + 6, 4, 6);
-            ctx.fillStyle = '#fff'; ctx.font = '3px monospace';
-            ctx.fillText('MANTI', rocket.x - 12, rocket.y - 12);
+            ctx.fillStyle = '#fff';
+            ctx.font = '3px "Press Start 2P"';
+            ctx.fillText('MANTI', rocket.x - 14, rocket.y - 12);
 
             requestAnimationFrame(draw);
         }
@@ -270,18 +348,11 @@
         setInterval(loadVisitors, 5000);
         setInterval(updateMe, 3000);
 
-        setInterval(function() {
-            meteors.push({
-                x: Math.random() * width, y: -10,
-                speed: 3 + Math.random() * 5, angle: (Math.random() - 0.5) * 0.3,
-                length: 10 + Math.random() * 20
-            });
-            if (meteors.length > 8) meteors.shift();
-        }, 3000);
-
         window.addEventListener('resize', function() {
-            width = window.innerWidth; height = window.innerHeight;
-            canvas.width = width; canvas.height = height;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
         });
 
         draw();
