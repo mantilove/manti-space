@@ -4,353 +4,189 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manti Space</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><text x='50%' y='55%' font-size='12' font-family='monospace' font-weight='bold' text-anchor='middle' fill='white' dominant-baseline='middle'>M</text></svg>">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background: #000;
+        body { 
+            background: #000; 
+            overflow: hidden; 
             height: 100vh;
-            overflow: hidden;
-            font-family: 'Press Start 2P', monospace;
-            color: #fff;
+            width: 100vw;
         }
-
-        canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
+        canvas { 
+            display: block;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
         }
-
-        .bottom-text {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
+        p {
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
             transform: translateX(-50%);
-            z-index: 2;
+            color: #fff; 
+            font-size: 10px; 
+            font-family: monospace;
+            z-index: 2; 
             pointer-events: none;
-            font-size: 7px;
-            color: #555;
-            letter-spacing: 3px;
         }
     </style>
 </head>
 <body>
-    <canvas id="space"></canvas>
-    <p class="bottom-text" id="counter">загрузка...</p>
+    <canvas id="s"></canvas>
+    <p id="counter">🚀 MANTI SPACE</p>
 
     <script>
-        // ===== TELEGRAM =====
-        const tg = window.Telegram?.WebApp;
-        if (tg) tg.expand();
+    (function() {
+        var canvas = document.getElementById('s');
+        var ctx = canvas.getContext('2d');
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        var stars = [];
+        var meteors = [];
+        var rocket = {
+            x: width / 2,
+            y: height * 0.8,
+            targetY: height * 0.1,
+            arrived: false,
+            trail: [],
+            wobble: 0
+        };
 
-        const user = tg?.initDataUnsafe?.user;
-        const userId = user ? String(user.id) : 'anon_' + Math.random().toString(36).slice(2);
-        const userName = user?.first_name || user?.username || 'Гость';
-        const userNick = user?.username ? '@' + user.username : userName;
-        const userPhoto = user?.photo_url || null;
-
-        // ===== GITHUB GIST КАК БАЗА ДАННЫХ =====
-        // Создай Gist на github.com, скопируй его ID и raw URL
-        const GIST_ID = 'ТВОЙ_GIST_ID';
-        const GIST_RAW = `https://api.github.com/gists/${GIST_ID}`;
-
-        // ===== CANVAS =====
-        const canvas = document.getElementById('space');
-        const ctx = canvas.getContext('2d');
-        let width, height;
-        let stars = [];
-        let rocket;
-        let meteors = [];
-        let visitors = [];
-
-        class Star {
-            constructor() {
-                this.x = Math.random() * width;
-                this.y = Math.random() * height;
-                this.size = Math.random() * 2;
-                this.opacity = 0.3 + Math.random() * 0.7;
-                this.speed = 0.002 + Math.random() * 0.01;
-                this.offset = Math.random() * Math.PI * 2;
-            }
-            draw(ctx) {
-                const o = this.opacity * (0.6 + 0.4 * Math.sin(Date.now() * this.speed + this.offset));
-                ctx.fillStyle = `rgba(255,255,255,${o})`;
-                ctx.fillRect(this.x, this.y, this.size, this.size);
-            }
+        for (var i = 0; i < 200; i++) {
+            stars.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: Math.random() * 2,
+                opacity: Math.random(),
+                speed: Math.random() * 0.01,
+                offset: Math.random() * 100
+            });
         }
 
-        class Meteor {
-            constructor() { this.reset(true); }
-            reset(init = false) {
-                this.x = Math.random() * width * 1.2 - width * 0.1;
-                this.y = init ? Math.random() * height : -20;
-                this.speed = 3 + Math.random() * 5;
-                this.angle = (Math.random() - 0.5) * 0.4;
-                this.len = 10 + Math.random() * 25;
-                this.opacity = 0.4 + Math.random() * 0.4;
+        for (var i = 0; i < 5; i++) {
+            meteors.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                speed: 3 + Math.random() * 5,
+                angle: (Math.random() - 0.5) * 0.3,
+                length: 10 + Math.random() * 20
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            for (var i = 0; i < stars.length; i++) {
+                var s = stars[i];
+                var opacity = s.opacity * (0.5 + 0.5 * Math.sin(Date.now() * s.speed + s.offset));
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + opacity + ')';
+                ctx.fillRect(s.x, s.y, s.size, s.size);
             }
-            update() {
-                this.y += this.speed;
-                this.x += this.angle;
-                if (this.y > height + 30) this.reset();
-            }
-            draw(ctx) {
-                ctx.strokeStyle = `rgba(255,255,255,${this.opacity})`;
+
+            for (var i = 0; i < meteors.length; i++) {
+                var m = meteors[i];
+                m.y += m.speed;
+                m.x += m.angle;
+                
+                if (m.y > height + 20 || m.x < -20 || m.x > width + 20) {
+                    m.y = -10;
+                    m.x = Math.random() * width;
+                }
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(this.x - this.angle * this.len, this.y - this.len);
+                ctx.moveTo(m.x, m.y);
+                ctx.lineTo(m.x - m.angle * m.length, m.y - m.length);
                 ctx.stroke();
                 ctx.fillStyle = '#fff';
-                ctx.fillRect(this.x, this.y, 2, 2);
+                ctx.fillRect(m.x, m.y, 2, 2);
             }
-        }
 
-        class Rocket {
-            constructor() {
-                this.x = width / 2;
-                this.y = height * 0.85;
-                this.targetY = height * 0.1;
-                this.trail = [];
-                this.arrived = false;
-                this.wobble = 0;
-            }
-            update() {
-                if (!this.arrived && this.y > this.targetY) {
-                    this.y -= 0.7;
-                    this.wobble += 0.1;
-                    for (let i = 0; i < 2; i++) {
-                        this.trail.push({
-                            x: this.x + Math.sin(this.wobble) * 3 + (Math.random() - 0.5) * 6,
-                            y: this.y + 14, opacity: 0.9,
-                            size: 2 + Math.random() * 5
-                        });
-                    }
-                } else {
-                    this.arrived = true;
-                    this.y += Math.sin(Date.now() * 0.0008) * 0.4;
-                    this.x += Math.cos(Date.now() * 0.0006) * 0.3;
-                }
-                this.trail.forEach(t => { t.opacity -= 0.012; t.y += 0.4; });
-                this.trail = this.trail.filter(t => t.opacity > 0);
-            }
-            draw(ctx) {
-                this.trail.forEach(t => {
-                    const g = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.size);
-                    g.addColorStop(0, `rgba(255,200,50,${Math.max(0,t.opacity)})`);
-                    g.addColorStop(0.5, `rgba(255,100,30,${Math.max(0,t.opacity*0.6)})`);
-                    g.addColorStop(1, 'rgba(255,50,10,0)');
-                    ctx.fillStyle = g;
-                    ctx.fillRect(t.x - t.size, t.y - t.size, t.size * 2, t.size * 2);
+            if (!rocket.arrived && rocket.y > rocket.targetY) {
+                rocket.y -= 0.7;
+                rocket.wobble += 0.1;
+                rocket.trail.push({
+                    x: rocket.x + Math.sin(rocket.wobble) * 3 + (Math.random() - 0.5) * 6,
+                    y: rocket.y + 14,
+                    opacity: 0.9
                 });
-                if (!this.arrived) {
-                    for (let i = 0; i < 3; i++) {
-                        const f = 8 + Math.random() * 12;
-                        const ox = (Math.random() - 0.5) * 5;
-                        ctx.fillStyle = ['#fff', '#ffd700', '#ff6b35'][i];
-                        ctx.beginPath();
-                        ctx.moveTo(this.x - 5 + ox, this.y + 10);
-                        ctx.lineTo(this.x + ox, this.y + 18 + f);
-                        ctx.lineTo(this.x + 5 + ox, this.y + 10);
-                        ctx.fill();
-                    }
-                }
-                const bg = ctx.createLinearGradient(this.x, this.y - 10, this.x, this.y + 14);
-                bg.addColorStop(0, '#f0f0f0');
-                bg.addColorStop(0.5, '#d0d0d0');
-                bg.addColorStop(1, '#999');
-                ctx.fillStyle = bg;
-                ctx.fillRect(this.x - 7, this.y - 10, 14, 24);
-                ctx.fillStyle = '#ff4444';
-                ctx.fillRect(this.x - 7, this.y - 4, 14, 2);
-                ctx.fillRect(this.x - 7, this.y + 6, 14, 2);
-                ctx.fillStyle = '#ff2222';
+            } else {
+                rocket.arrived = true;
+                rocket.y += Math.sin(Date.now() * 0.0008) * 0.4;
+                rocket.x += Math.cos(Date.now() * 0.0006) * 0.3;
+            }
+
+            for (var i = 0; i < rocket.trail.length; i++) {
+                rocket.trail[i].opacity -= 0.012;
+                rocket.trail[i].y += 0.4;
+            }
+            rocket.trail = rocket.trail.filter(function(t) { return t.opacity > 0; });
+
+            for (var i = 0; i < rocket.trail.length; i++) {
+                ctx.fillStyle = 'rgba(255, 200, 50, ' + rocket.trail[i].opacity + ')';
+                ctx.fillRect(rocket.trail[i].x - 2, rocket.trail[i].y - 2, 4, 4);
+            }
+
+            if (!rocket.arrived) {
+                ctx.fillStyle = '#ff6b35';
                 ctx.beginPath();
-                ctx.moveTo(this.x - 7, this.y - 10);
-                ctx.lineTo(this.x, this.y - 24);
-                ctx.lineTo(this.x + 7, this.y - 10);
+                ctx.moveTo(rocket.x - 5, rocket.y + 10);
+                ctx.lineTo(rocket.x, rocket.y + 22);
+                ctx.lineTo(rocket.x + 5, rocket.y + 10);
                 ctx.fill();
-                ctx.fillStyle = '#0a0a1a';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#4af';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(this.x + 1, this.y - 1, 1, 1);
-                ctx.fillStyle = '#777';
-                ctx.fillRect(this.x - 11, this.y + 8, 4, 8);
-                ctx.fillRect(this.x + 7, this.y + 8, 4, 8);
-                ctx.fillStyle = '#555';
-                ctx.fillRect(this.x - 11, this.y + 16, 4, 3);
-                ctx.fillRect(this.x + 7, this.y + 16, 4, 3);
-                ctx.fillStyle = '#111';
-                ctx.font = '3px "Press Start 2P"';
-                ctx.fillText('MANTI', this.x - 13, this.y - 13);
             }
+
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(rocket.x - 5, rocket.y - 8, 10, 20);
+
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.moveTo(rocket.x - 5, rocket.y - 8);
+            ctx.lineTo(rocket.x, rocket.y - 16);
+            ctx.lineTo(rocket.x + 5, rocket.y - 8);
+            ctx.fill();
+
+            ctx.fillStyle = '#4af';
+            ctx.fillRect(rocket.x - 2, rocket.y, 4, 4);
+
+            ctx.fillStyle = '#888';
+            ctx.fillRect(rocket.x - 9, rocket.y + 6, 4, 6);
+            ctx.fillRect(rocket.x + 5, rocket.y + 6, 4, 6);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '3px monospace';
+            ctx.fillText('MANTI', rocket.x - 12, rocket.y - 12);
+
+            requestAnimationFrame(draw);
         }
 
-        class FlyingVisitor {
-            constructor(data) {
-                this.id = data.id;
-                this.name = data.name;
-                this.nick = data.nick;
-                this.photo = data.photo;
-                this.isMe = data.id === userId;
-                this.x = data.x || Math.random() * width;
-                this.y = data.y || Math.random() * height;
-                this.speedX = data.speedX || (Math.random() - 0.5) * 0.5;
-                this.speedY = data.speedY || (Math.random() - 0.5) * 0.3;
-                this.size = this.isMe ? 45 : 25 + Math.random() * 15;
-                this.pulseOffset = Math.random() * Math.PI * 2;
-                this.img = new Image();
-                if (this.photo) this.img.src = this.photo;
-            }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x < this.size || this.x > width - this.size) this.speedX *= -1;
-                if (this.y < this.size || this.y > height - this.size) this.speedY *= -1;
-            }
-            draw(ctx) {
-                const pulse = 1 + Math.sin(Date.now() * 0.003 + this.pulseOffset) * 0.08;
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                if (this.isMe) { ctx.shadowColor = '#4af'; ctx.shadowBlur = 20; }
-                ctx.beginPath();
-                ctx.arc(0, 0, this.size * pulse, 0, Math.PI * 2);
-                ctx.clip();
-                if (this.img.complete && this.img.naturalWidth > 0) {
-                    ctx.drawImage(this.img, -this.size * pulse, -this.size * pulse, this.size * 2 * pulse, this.size * 2 * pulse);
-                } else {
-                    ctx.fillStyle = this.isMe ? '#fff' : '#555';
-                    ctx.fillRect(-this.size * pulse, -this.size * pulse, this.size * 2 * pulse, this.size * 2 * pulse);
-                    ctx.fillStyle = '#000';
-                    ctx.font = `${this.size*0.7}px "Press Start 2P"`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(this.name.charAt(0).toUpperCase(), 0, 1);
-                }
-                ctx.restore();
-                ctx.fillStyle = this.isMe ? '#fff' : 'rgba(200,200,200,0.7)';
-                ctx.font = `${this.isMe?8:6}px "Press Start 2P"`;
-                ctx.textAlign = 'center';
-                ctx.fillText(this.nick, this.x, this.y + this.size + 12);
-            }
-        }
+        draw();
 
-        // ===== GITHUB GIST: ПОЛУЧИТЬ ПОСЕТИТЕЛЕЙ =====
-        async function loadVisitors() {
-            try {
-                const res = await fetch(GIST_RAW);
-                const data = await res.json();
-                const files = data.files;
-                const rawUrl = files['visitors.json']?.raw_url;
-                if (rawUrl) {
-                    const jsonRes = await fetch(rawUrl);
-                    const json = await jsonRes.json();
-                    const all = json.visitors || [];
-                    const now = Date.now();
-                    const alive = all.filter(v => now - v.lastSeen < 120000);
-                    alive.forEach(v => {
-                        if (!visitors.find(x => x.id === v.id)) {
-                            visitors.push(new FlyingVisitor(v));
-                        }
-                    });
-                    document.getElementById('counter').textContent = `👾 в космосе: ${visitors.length}`;
-                }
-            } catch(e) {
-                document.getElementById('counter').textContent = '🚀 MANTI SPACE';
-            }
-        }
+        setInterval(function() {
+            meteors.push({
+                x: Math.random() * width,
+                y: -10,
+                speed: 3 + Math.random() * 5,
+                angle: (Math.random() - 0.5) * 0.3,
+                length: 10 + Math.random() * 20
+            });
+            if (meteors.length > 8) meteors.shift();
+        }, 3000);
 
-        // ===== GITHUB GIST: ОБНОВИТЬ СЕБЯ =====
-        async function updateMe() {
-            const me = visitors.find(v => v.id === userId);
-            const visitorData = {
-                id: userId,
-                name: userName,
-                nick: userNick,
-                photo: userPhoto,
-                x: me ? me.x : Math.random() * width,
-                y: me ? me.y : Math.random() * height,
-                speedX: me ? me.speedX : (Math.random() - 0.5) * 0.5,
-                speedY: me ? me.speedY : (Math.random() - 0.5) * 0.3,
-                lastSeen: Date.now()
-            };
-
-            // Сохраняем в localStorage для своей сессии
-            const allVisitors = JSON.parse(localStorage.getItem('allVisitors') || '[]');
-            const idx = allVisitors.findIndex(v => v.id === userId);
-            if (idx >= 0) allVisitors[idx] = visitorData;
-            else allVisitors.push(visitorData);
-            localStorage.setItem('allVisitors', JSON.stringify(allVisitors));
-        }
-
-        function resize() {
+        window.addEventListener('resize', function() {
             width = window.innerWidth;
             height = window.innerHeight;
             canvas.width = width;
             canvas.height = height;
-            stars = [];
-            for (let i = 0; i < 250; i++) stars.push(new Star());
-        }
-
-        function init() {
-            resize();
-            rocket = new Rocket();
-            meteors = [];
-            for (let i = 0; i < 6; i++) meteors.push(new Meteor());
-
-            // Загружаем сохранённых
-            const saved = JSON.parse(localStorage.getItem('allVisitors') || '[]');
-            const now = Date.now();
-            saved.filter(v => now - v.lastSeen < 300000).forEach(v => {
-                visitors.push(new FlyingVisitor(v));
-            });
-
-            // Добавляем себя
-            const me = new FlyingVisitor({
-                id: userId, name: userName, nick: userNick,
-                photo: userPhoto, x: Math.random() * width,
-                y: Math.random() * height,
-                speedX: (Math.random() - 0.5) * 0.5,
-                speedY: (Math.random() - 0.5) * 0.3
-            });
-            visitors.push(me);
-
-            document.getElementById('counter').textContent = `👾 в космосе: ${visitors.length}`;
-            updateMe();
-            setInterval(updateMe, 3000);
-        }
-
-        function animate() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-            ctx.fillRect(0, 0, width, height);
-            stars.forEach(s => s.draw(ctx));
-            meteors.forEach(m => { m.update(); m.draw(ctx); });
-            visitors.forEach(v => { v.update(); v.draw(ctx); });
-            rocket.update();
-            rocket.draw(ctx);
-            requestAnimationFrame(animate);
-        }
-
-        window.addEventListener('resize', resize);
-        init();
-        animate();
-
-        setInterval(() => {
-            meteors.push(new Meteor());
-            if (meteors.length > 8) meteors.shift();
-        }, 2500);
+        });
+    })();
     </script>
 </body>
 </html>
