@@ -7,28 +7,12 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><text x='50%' y='55%' font-size='12' font-family='monospace' font-weight='bold' text-anchor='middle' fill='white' dominant-baseline='middle'>M</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #000; 
-            overflow: hidden; 
-            height: 100vh;
-            width: 100vw;
-        }
-        canvas { 
-            display: block;
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-        }
+        body { background: #000; overflow: hidden; height: 100vh; width: 100vw; }
+        canvas { display: block; position: fixed; top: 0; left: 0; }
         p {
-            position: fixed; 
-            bottom: 20px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            color: #fff; 
-            font-size: 10px; 
-            font-family: monospace;
-            z-index: 2; 
-            pointer-events: none;
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 10px; font-family: monospace;
+            z-index: 2; pointer-events: none;
         }
     </style>
 </head>
@@ -38,102 +22,225 @@
 
     <script>
     (function() {
+        // ===== GIST =====
+        var GIST_ID = 'ff30590bbffd3ddd496ceda0c8b5b1a8';
+        var GIST_URL = 'https://api.github.com/gists/' + GIST_ID;
+        var GIST_TOKEN = ''; // Оставь пустым для публичного gist
+
+        // ===== ПОЛУЧИТЬ ИМЯ (из Telegram или гость) =====
+        var visitorName = 'Гость';
+        var visitorNick = 'Гость';
+        var visitorPhoto = null;
+        var visitorId = 'guest_' + Math.random().toString(36).slice(2, 10);
+
+        try {
+            var tg = window.Telegram.WebApp;
+            if (tg) {
+                tg.expand();
+                var u = tg.initDataUnsafe.user;
+                if (u) {
+                    visitorId = 'tg_' + u.id;
+                    visitorName = u.first_name || 'Гость';
+                    visitorNick = u.username ? '@' + u.username : visitorName;
+                    visitorPhoto = u.photo_url || null;
+                }
+            }
+        } catch(e) {}
+
+        // ===== CANVAS =====
         var canvas = document.getElementById('s');
         var ctx = canvas.getContext('2d');
         var width = window.innerWidth;
         var height = window.innerHeight;
-        
         canvas.width = width;
         canvas.height = height;
-        
+
         var stars = [];
         var meteors = [];
+        var visitors = [];
         var rocket = {
-            x: width / 2,
-            y: height * 0.8,
-            targetY: height * 0.1,
-            arrived: false,
-            trail: [],
-            wobble: 0
+            x: width / 2, y: height * 0.8,
+            targetY: height * 0.1, arrived: false,
+            trail: [], wobble: 0
         };
 
         for (var i = 0; i < 200; i++) {
             stars.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                size: Math.random() * 2,
-                opacity: Math.random(),
-                speed: Math.random() * 0.01,
-                offset: Math.random() * 100
+                x: Math.random() * width, y: Math.random() * height,
+                size: Math.random() * 2, opacity: Math.random(),
+                speed: Math.random() * 0.01, offset: Math.random() * 100
             });
         }
-
         for (var i = 0; i < 5; i++) {
             meteors.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                speed: 3 + Math.random() * 5,
-                angle: (Math.random() - 0.5) * 0.3,
+                x: Math.random() * width, y: Math.random() * height,
+                speed: 3 + Math.random() * 5, angle: (Math.random() - 0.5) * 0.3,
                 length: 10 + Math.random() * 20
             });
         }
 
+        // ===== АВАТАРКА ПОСЕТИТЕЛЯ =====
+        function createVisitor(data) {
+            var img = null;
+            if (data.photo) {
+                img = new Image();
+                img.src = data.photo;
+            }
+            return {
+                id: data.id, name: data.name, nick: data.nick,
+                photo: data.photo, img: img, isMe: data.id === visitorId,
+                x: data.x || Math.random() * width,
+                y: data.y || Math.random() * height,
+                sx: data.sx || (Math.random() - 0.5) * 0.5,
+                sy: data.sy || (Math.random() - 0.5) * 0.3,
+                size: data.id === visitorId ? 45 : 20 + Math.random() * 20,
+                pulse: Math.random() * 6.28
+            };
+        }
+
+        function drawVisitor(v) {
+            var pulse = 1 + Math.sin(Date.now() * 0.003 + v.pulse) * 0.08;
+            v.x += v.sx; v.y += v.sy;
+            if (v.x < v.size || v.x > width - v.size) v.sx *= -1;
+            if (v.y < v.size || v.y > height - v.size) v.sy *= -1;
+
+            ctx.save();
+            ctx.translate(v.x, v.y);
+            if (v.isMe) { ctx.shadowColor = '#4af'; ctx.shadowBlur = 20; }
+            ctx.beginPath();
+            ctx.arc(0, 0, v.size * pulse, 0, Math.PI * 2);
+            ctx.clip();
+
+            if (v.img && v.img.complete && v.img.naturalWidth > 0) {
+                ctx.drawImage(v.img, -v.size * pulse, -v.size * pulse, v.size * 2 * pulse, v.size * 2 * pulse);
+            } else {
+                ctx.fillStyle = v.isMe ? '#fff' : '#555';
+                ctx.fillRect(-v.size * pulse, -v.size * pulse, v.size * 2 * pulse, v.size * 2 * pulse);
+                ctx.fillStyle = '#000';
+                ctx.font = (v.size * 0.7) + 'px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(v.name.charAt(0).toUpperCase(), 0, 1);
+            }
+            ctx.restore();
+
+            ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200,200,200,0.7)';
+            ctx.font = (v.isMe ? 8 : 6) + 'px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(v.nick, v.x, v.y + v.size + 12);
+        }
+
+        // ===== GIST API =====
+        function loadVisitors() {
+            fetch(GIST_URL)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var rawUrl = data.files['visitors.json'].raw_url;
+                    return fetch(rawUrl);
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(json) {
+                    var all = json.visitors || [];
+                    var now = Date.now();
+                    var alive = all.filter(function(v) { return now - v.lastSeen < 120000; });
+                    visitors = [];
+                    alive.forEach(function(v) {
+                        visitors.push(createVisitor(v));
+                    });
+                    // Добавляем себя если нет
+                    if (!visitors.find(function(v) { return v.id === visitorId; })) {
+                        visitors.push(createVisitor({
+                            id: visitorId, name: visitorName,
+                            nick: visitorNick, photo: visitorPhoto
+                        }));
+                    }
+                    document.getElementById('counter').textContent = '👾 ' + visitors.length;
+                })
+                .catch(function() {
+                    document.getElementById('counter').textContent = '🚀 MANTI SPACE';
+                });
+        }
+
+        function updateMe() {
+            var me = visitors.find(function(v) { return v.id === visitorId; });
+            if (!me) return;
+
+            fetch(GIST_URL)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var all = JSON.parse(data.files['visitors.json'].content);
+                    var now = Date.now();
+                    all.visitors = all.visitors.filter(function(v) { return now - v.lastSeen < 120000; });
+                    var idx = all.visitors.findIndex(function(v) { return v.id === visitorId; });
+                    var vd = {
+                        id: visitorId, name: visitorName, nick: visitorNick,
+                        photo: visitorPhoto, x: me.x, y: me.y,
+                        sx: me.sx, sy: me.sy, lastSeen: now
+                    };
+                    if (idx >= 0) all.visitors[idx] = vd;
+                    else all.visitors.push(vd);
+
+                    return fetch(GIST_URL, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            files: { 'visitors.json': { content: JSON.stringify(all) } }
+                        })
+                    });
+                })
+                .catch(function() {});
+        }
+
+        // ===== ОТРИСОВКА =====
         function draw() {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fillRect(0, 0, width, height);
 
             for (var i = 0; i < stars.length; i++) {
                 var s = stars[i];
-                var opacity = s.opacity * (0.5 + 0.5 * Math.sin(Date.now() * s.speed + s.offset));
-                ctx.fillStyle = 'rgba(255, 255, 255, ' + opacity + ')';
+                var o = s.opacity * (0.5 + 0.5 * Math.sin(Date.now() * s.speed + s.offset));
+                ctx.fillStyle = 'rgba(255,255,255,' + o + ')';
                 ctx.fillRect(s.x, s.y, s.size, s.size);
             }
 
             for (var i = 0; i < meteors.length; i++) {
                 var m = meteors[i];
-                m.y += m.speed;
-                m.x += m.angle;
-                
+                m.y += m.speed; m.x += m.angle;
                 if (m.y > height + 20 || m.x < -20 || m.x > width + 20) {
-                    m.y = -10;
-                    m.x = Math.random() * width;
+                    m.y = -10; m.x = Math.random() * width;
                 }
-                
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(m.x, m.y);
                 ctx.lineTo(m.x - m.angle * m.length, m.y - m.length);
                 ctx.stroke();
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(m.x, m.y, 2, 2);
+                ctx.fillStyle = '#fff'; ctx.fillRect(m.x, m.y, 2, 2);
+            }
+
+            for (var i = 0; i < visitors.length; i++) {
+                drawVisitor(visitors[i]);
             }
 
             if (!rocket.arrived && rocket.y > rocket.targetY) {
-                rocket.y -= 0.7;
-                rocket.wobble += 0.1;
+                rocket.y -= 0.7; rocket.wobble += 0.1;
                 rocket.trail.push({
                     x: rocket.x + Math.sin(rocket.wobble) * 3 + (Math.random() - 0.5) * 6,
-                    y: rocket.y + 14,
-                    opacity: 0.9
+                    y: rocket.y + 14, opacity: 0.9
                 });
             } else {
                 rocket.arrived = true;
                 rocket.y += Math.sin(Date.now() * 0.0008) * 0.4;
                 rocket.x += Math.cos(Date.now() * 0.0006) * 0.3;
             }
-
             for (var i = 0; i < rocket.trail.length; i++) {
                 rocket.trail[i].opacity -= 0.012;
                 rocket.trail[i].y += 0.4;
             }
             rocket.trail = rocket.trail.filter(function(t) { return t.opacity > 0; });
-
             for (var i = 0; i < rocket.trail.length; i++) {
-                ctx.fillStyle = 'rgba(255, 200, 50, ' + rocket.trail[i].opacity + ')';
+                ctx.fillStyle = 'rgba(255,200,50,' + rocket.trail[i].opacity + ')';
                 ctx.fillRect(rocket.trail[i].x - 2, rocket.trail[i].y - 2, 4, 4);
             }
-
             if (!rocket.arrived) {
                 ctx.fillStyle = '#ff6b35';
                 ctx.beginPath();
@@ -142,50 +249,42 @@
                 ctx.lineTo(rocket.x + 5, rocket.y + 10);
                 ctx.fill();
             }
-
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(rocket.x - 5, rocket.y - 8, 10, 20);
-
+            ctx.fillStyle = '#e0e0e0'; ctx.fillRect(rocket.x - 5, rocket.y - 8, 10, 20);
             ctx.fillStyle = '#ff4444';
             ctx.beginPath();
             ctx.moveTo(rocket.x - 5, rocket.y - 8);
             ctx.lineTo(rocket.x, rocket.y - 16);
             ctx.lineTo(rocket.x + 5, rocket.y - 8);
             ctx.fill();
-
-            ctx.fillStyle = '#4af';
-            ctx.fillRect(rocket.x - 2, rocket.y, 4, 4);
-
+            ctx.fillStyle = '#4af'; ctx.fillRect(rocket.x - 2, rocket.y, 4, 4);
             ctx.fillStyle = '#888';
             ctx.fillRect(rocket.x - 9, rocket.y + 6, 4, 6);
             ctx.fillRect(rocket.x + 5, rocket.y + 6, 4, 6);
-
-            ctx.fillStyle = '#fff';
-            ctx.font = '3px monospace';
+            ctx.fillStyle = '#fff'; ctx.font = '3px monospace';
             ctx.fillText('MANTI', rocket.x - 12, rocket.y - 12);
 
             requestAnimationFrame(draw);
         }
 
-        draw();
+        loadVisitors();
+        setInterval(loadVisitors, 5000);
+        setInterval(updateMe, 3000);
 
         setInterval(function() {
             meteors.push({
-                x: Math.random() * width,
-                y: -10,
-                speed: 3 + Math.random() * 5,
-                angle: (Math.random() - 0.5) * 0.3,
+                x: Math.random() * width, y: -10,
+                speed: 3 + Math.random() * 5, angle: (Math.random() - 0.5) * 0.3,
                 length: 10 + Math.random() * 20
             });
             if (meteors.length > 8) meteors.shift();
         }, 3000);
 
         window.addEventListener('resize', function() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
+            width = window.innerWidth; height = window.innerHeight;
+            canvas.width = width; canvas.height = height;
         });
+
+        draw();
     })();
     </script>
 </body>
