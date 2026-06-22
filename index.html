@@ -10,10 +10,15 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #000; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Press Start 2P', monospace; }
         canvas { display: block; position: fixed; top: 0; left: 0; }
+        #debug {
+            position: fixed; top: 10px; left: 10px; z-index: 10;
+            color: #0f0; font-size: 8px; pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <canvas id="s"></canvas>
+    <div id="debug"></div>
 
     <script>
     (function() {
@@ -24,20 +29,32 @@
         var visitorNick = 'Гость';
         var visitorPhoto = null;
         var visitorId = 'guest_' + Math.random().toString(36).slice(2, 10);
+        var debugText = '';
 
         try {
             var tg = window.Telegram.WebApp;
+            debugText += 'TG: ' + (tg ? 'ДА' : 'НЕТ') + '\n';
             if (tg) {
                 tg.expand();
-                var u = tg.initDataUnsafe.user;
+                debugText += 'initData: ' + (tg.initData ? 'ДА' : 'НЕТ') + '\n';
+                debugText += 'initDataUnsafe: ' + (tg.initDataUnsafe ? 'ДА' : 'НЕТ') + '\n';
+                var u = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+                debugText += 'user: ' + (u ? 'ДА' : 'НЕТ') + '\n';
                 if (u) {
                     visitorId = 'tg_' + u.id;
                     visitorName = u.first_name || 'Гость';
                     visitorNick = u.username ? '@' + u.username : visitorName;
                     visitorPhoto = u.photo_url || null;
+                    debugText += 'name: ' + visitorName + '\n';
+                    debugText += 'nick: ' + visitorNick + '\n';
+                    debugText += 'photo: ' + (visitorPhoto ? 'ДА' : 'НЕТ') + '\n';
                 }
             }
-        } catch(e) {}
+        } catch(e) {
+            debugText += 'ERROR: ' + e.message + '\n';
+        }
+
+        document.getElementById('debug').textContent = debugText;
 
         var canvas = document.getElementById('s');
         var ctx = canvas.getContext('2d');
@@ -209,20 +226,18 @@
             var me = visitors.find(function(v) { return v.id === visitorId; });
             if (!me) return;
 
-            var data = {
-                id: visitorId,
-                name: visitorName,
-                nick: visitorNick,
-                photo: visitorPhoto || '',
-                x: me.x,
-                y: me.y,
-                lastSeen: Date.now()
-            };
-
             fetch(POST_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    id: visitorId,
+                    name: visitorName,
+                    nick: visitorNick,
+                    photo: visitorPhoto || '',
+                    x: me.x,
+                    y: me.y,
+                    lastSeen: Date.now()
+                })
             }).catch(function() {});
         }
 
