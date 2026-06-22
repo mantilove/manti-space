@@ -10,54 +10,20 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #000; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Press Start 2P', monospace; }
         canvas { display: block; position: fixed; top: 0; left: 0; }
-        #tokenBox {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 10; background: #111; border: 1px solid #333; padding: 20px;
-            text-align: center; display: none;
-        }
-        #tokenBox input {
-            background: #000; border: 1px solid #555; color: #fff;
-            padding: 10px; font-family: 'Press Start 2P', monospace; font-size: 8px;
-            width: 300px; text-align: center; margin: 10px 0;
-        }
-        #tokenBox button {
-            background: #fff; color: #000; border: none; padding: 10px 20px;
-            font-family: 'Press Start 2P', monospace; font-size: 8px; cursor: pointer;
-        }
     </style>
 </head>
 <body>
     <canvas id="s"></canvas>
-    <div id="tokenBox">
-        <p style="font-size:9px;color:#fff;">ВВЕДИ ТОКЕН</p>
-        <input type="password" id="tokenInput" placeholder="ghp_...">
-        <br>
-        <button id="tokenSave">OK</button>
-    </div>
 
     <script>
     (function() {
-        var GIST_ID = 'ff30590bbffd3ddd496ceda0c8b5b1a8';
-        var GIST_URL = 'https://api.github.com/gists/' + GIST_ID;
-        var GIST_TOKEN = localStorage.getItem('manti_space_token') || '';
+        var CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTCOEo_Hwq34yzWBbS801jxHctcX6vk9KOM09zdSANjjEIjwx-AvwjDjx_XyF4znvaXodA7cBqWRRdS/pub?gid=0&single=true&output=csv';
+        var POST_URL = 'https://script.google.com/macros/s/AKfycby-gRHhf0tdoBuY77vDI6K2wc3vorLJvyGZlCfBtjZXCrAUxKui-9bafQ6wqpyJcqtc/exec';
 
         var visitorName = 'Гость';
         var visitorNick = 'Гость';
         var visitorPhoto = null;
         var visitorId = 'guest_' + Math.random().toString(36).slice(2, 10);
-
-        // ===== ПОКАЗАТЬ ОКНО ТОКЕНА =====
-        if (!GIST_TOKEN) {
-            document.getElementById('tokenBox').style.display = 'block';
-            document.getElementById('tokenSave').addEventListener('click', function() {
-                var t = document.getElementById('tokenInput').value.trim();
-                if (t) {
-                    localStorage.setItem('manti_space_token', t);
-                    GIST_TOKEN = t;
-                    document.getElementById('tokenBox').style.display = 'none';
-                }
-            });
-        }
 
         try {
             var tg = window.Telegram.WebApp;
@@ -101,18 +67,14 @@
                 img.src = data.photo;
             }
             return {
-                id: data.id,
-                name: data.name,
-                nick: data.nick,
-                photo: data.photo,
-                img: img,
-                isMe: data.id === visitorId,
-                x: data.x || Math.random() * (width - 100) + 50,
-                y: data.y || Math.random() * (height - 200) + 100,
-                sx: data.sx || (Math.random() - 0.5) * 0.5,
-                sy: data.sy || (Math.random() - 0.5) * 0.4,
+                id: data.id, name: data.name, nick: data.nick,
+                photo: data.photo, img: img, isMe: data.id === visitorId,
+                x: parseFloat(data.x) || Math.random() * (width - 100) + 50,
+                y: parseFloat(data.y) || Math.random() * (height - 200) + 100,
+                sx: (Math.random() - 0.5) * 0.5,
+                sy: (Math.random() - 0.5) * 0.4,
                 size: data.id === visitorId ? 50 : 22 + Math.random() * 22,
-                lastSeen: data.lastSeen || Date.now(),
+                lastSeen: parseInt(data.lastSeen) || Date.now(),
                 pulse: Math.random() * 6.28
             };
         }
@@ -126,19 +88,19 @@
             var pulse = 1 + Math.sin(Date.now() * 0.003 + v.pulse) * 0.06;
             var r = v.size * pulse;
 
-            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)';
+            ctx.strokeStyle = v.isMe ? 'rgba(68,170,255,0.25)' : 'rgba(255,255,255,0.06)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(v.x, v.y, r + 10, 0, Math.PI * 2);
             ctx.stroke();
 
-            ctx.strokeStyle = v.isMe ? 'rgba(68, 170, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)';
+            ctx.strokeStyle = v.isMe ? 'rgba(68,170,255,0.15)' : 'rgba(255,255,255,0.04)';
             ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.ellipse(v.x, v.y, r + 16, r * 0.2, 0.4, 0, Math.PI * 2);
             ctx.stroke();
 
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
             ctx.beginPath();
             ctx.arc(v.x + 3, v.y + 3, r, 0, Math.PI * 2);
             ctx.fill();
@@ -151,20 +113,20 @@
             if (v.img && v.img.complete && v.img.naturalWidth > 0) {
                 ctx.drawImage(v.img, v.x - r, v.y - r, r * 2, r * 2);
             } else {
-                var grad = ctx.createRadialGradient(v.x - r * 0.3, v.y - r * 0.3, r * 0.1, v.x, v.y, r);
+                var grad = ctx.createRadialGradient(v.x - r*0.3, v.y - r*0.3, r*0.1, v.x, v.y, r);
                 if (v.isMe) {
-                    grad.addColorStop(0, '#ffffff');
-                    grad.addColorStop(0.4, '#6ab0ff');
-                    grad.addColorStop(1, '#0d2b4a');
+                    grad.addColorStop(0,'#fff');
+                    grad.addColorStop(0.4,'#6ab0ff');
+                    grad.addColorStop(1,'#0d2b4a');
                 } else {
-                    grad.addColorStop(0, '#ddd');
-                    grad.addColorStop(0.5, '#888');
-                    grad.addColorStop(1, '#333');
+                    grad.addColorStop(0,'#ddd');
+                    grad.addColorStop(0.5,'#888');
+                    grad.addColorStop(1,'#333');
                 }
                 ctx.fillStyle = grad;
-                ctx.fillRect(v.x - r, v.y - r, r * 2, r * 2);
+                ctx.fillRect(v.x - r, v.y - r, r*2, r*2);
                 ctx.fillStyle = '#fff';
-                ctx.font = (r * 0.7) + 'px "Press Start 2P"';
+                ctx.font = (r*0.7) + 'px "Press Start 2P"';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(v.name.charAt(0).toUpperCase(), v.x, v.y);
@@ -172,62 +134,64 @@
             ctx.restore();
 
             if (v.isMe) {
-                var glow = ctx.createRadialGradient(v.x, v.y, r * 0.8, v.x, v.y, r * 2);
-                glow.addColorStop(0, 'rgba(68, 170, 255, 0.3)');
-                glow.addColorStop(1, 'rgba(68, 170, 255, 0)');
+                var glow = ctx.createRadialGradient(v.x, v.y, r*0.8, v.x, v.y, r*2);
+                glow.addColorStop(0,'rgba(68,170,255,0.3)');
+                glow.addColorStop(1,'rgba(68,170,255,0)');
                 ctx.fillStyle = glow;
                 ctx.beginPath();
-                ctx.arc(v.x, v.y, r * 2, 0, Math.PI * 2);
+                ctx.arc(v.x, v.y, r*2, 0, Math.PI*2);
                 ctx.fill();
             }
 
-            ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200, 200, 200, 0.8)';
+            ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200,200,200,0.8)';
             ctx.font = (v.isMe ? 10 : 7) + 'px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.fillText(v.nick, v.x, v.y + r + 16);
 
             var timeAgo = getTimeAgo(v.lastSeen);
-            ctx.fillStyle = 'rgba(150, 150, 150, 0.5)';
+            ctx.fillStyle = 'rgba(150,150,150,0.5)';
             ctx.font = '6px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.fillText(timeAgo, v.x, v.y + r + 28);
         }
 
-        function getTimeAgo(timestamp) {
-            var seconds = Math.floor((Date.now() - timestamp) / 1000);
-            if (seconds < 10) return 'сейчас';
-            if (seconds < 60) return seconds + 'с назад';
-            if (seconds < 3600) return Math.floor(seconds / 60) + 'м назад';
-            if (seconds < 86400) return Math.floor(seconds / 3600) + 'ч назад';
-            return Math.floor(seconds / 86400) + 'д назад';
+        function getTimeAgo(ts) {
+            var s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 10) return 'сейчас';
+            if (s < 60) return s + 'с';
+            if (s < 3600) return Math.floor(s/60) + 'м';
+            if (s < 86400) return Math.floor(s/3600) + 'ч';
+            return Math.floor(s/86400) + 'д';
         }
 
         function loadVisitors() {
-            if (!GIST_TOKEN) return;
-            fetch(GIST_URL, {
-                headers: {
-                    'Authorization': 'token ' + GIST_TOKEN,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    var rawUrl = data.files['visitors.json'].raw_url;
-                    return fetch(rawUrl);
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(json) {
-                    var all = json.visitors || [];
+            fetch(CSV_URL)
+                .then(function(r) { return r.text(); })
+                .then(function(csv) {
+                    var lines = csv.trim().split('\n');
+                    var all = [];
+                    for (var i = 1; i < lines.length; i++) {
+                        var parts = lines[i].split(',');
+                        if (parts.length >= 7) {
+                            all.push({
+                                id: parts[0],
+                                name: parts[1],
+                                nick: parts[2],
+                                photo: parts[3],
+                                x: parts[4],
+                                y: parts[5],
+                                lastSeen: parseInt(parts[6])
+                            });
+                        }
+                    }
                     var now = Date.now();
                     var alive = all.filter(function(v) { return now - v.lastSeen < 300000; });
                     var oldPos = {};
-                    visitors.forEach(function(v) {
-                        oldPos[v.id] = { x: v.x, y: v.y, sx: v.sx, sy: v.sy };
-                    });
+                    visitors.forEach(function(v) { oldPos[v.id] = { x:v.x, y:v.y, sx:v.sx, sy:v.sy }; });
                     visitors = [];
                     alive.forEach(function(v) {
                         var pos = oldPos[v.id];
-                        if (pos) { v.x = pos.x; v.y = pos.y; v.sx = pos.sx; v.sy = pos.sy; }
+                        if (pos) { v.x = pos.x; v.y = pos.y; }
                         visitors.push(createVisitor(v));
                     });
                     if (!visitors.find(function(v) { return v.id === visitorId; })) {
@@ -242,65 +206,46 @@
         }
 
         function updateMe() {
-            if (!GIST_TOKEN) return;
             var me = visitors.find(function(v) { return v.id === visitorId; });
             if (!me) return;
 
-            fetch(GIST_URL, {
-                headers: {
-                    'Authorization': 'token ' + GIST_TOKEN,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    var all = JSON.parse(data.files['visitors.json'].content);
-                    var now = Date.now();
-                    all.visitors = all.visitors.filter(function(v) { return now - v.lastSeen < 300000; });
-                    var idx = all.visitors.findIndex(function(v) { return v.id === visitorId; });
-                    var vd = {
-                        id: visitorId, name: visitorName, nick: visitorNick,
-                        photo: visitorPhoto, x: me.x, y: me.y,
-                        sx: me.sx, sy: me.sy, lastSeen: now
-                    };
-                    if (idx >= 0) all.visitors[idx] = vd;
-                    else all.visitors.push(vd);
+            var data = {
+                id: visitorId,
+                name: visitorName,
+                nick: visitorNick,
+                photo: visitorPhoto || '',
+                x: me.x,
+                y: me.y,
+                lastSeen: Date.now()
+            };
 
-                    return fetch(GIST_URL, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': 'token ' + GIST_TOKEN,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/vnd.github.v3+json'
-                        },
-                        body: JSON.stringify({
-                            files: { 'visitors.json': { content: JSON.stringify(all) } }
-                        })
-                    });
-                })
-                .catch(function() {});
+            fetch(POST_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(function() {});
         }
 
         function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fillRect(0, 0, width, height);
 
             for (var i = 0; i < stars.length; i++) {
                 var s = stars[i];
                 var o = s.opacity * (0.4 + 0.6 * Math.sin(Date.now() * s.speed + s.offset));
-                ctx.fillStyle = 'rgba(255, 255, 255, ' + o + ')';
+                ctx.fillStyle = 'rgba(255,255,255,' + o + ')';
                 ctx.fillRect(s.x, s.y, s.size, s.size);
             }
 
-            var t1 = ctx.createRadialGradient(width * 0.7, height * 0.3, 0, width * 0.7, height * 0.3, 250);
-            t1.addColorStop(0, 'rgba(30, 30, 80, 0.04)');
-            t1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            var t1 = ctx.createRadialGradient(width*0.7, height*0.3, 0, width*0.7, height*0.3, 250);
+            t1.addColorStop(0,'rgba(30,30,80,0.04)');
+            t1.addColorStop(1,'rgba(0,0,0,0)');
             ctx.fillStyle = t1;
             ctx.fillRect(0, 0, width, height);
 
-            var t2 = ctx.createRadialGradient(width * 0.2, height * 0.7, 0, width * 0.2, height * 0.7, 200);
-            t2.addColorStop(0, 'rgba(60, 15, 30, 0.04)');
-            t2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            var t2 = ctx.createRadialGradient(width*0.2, height*0.7, 0, width*0.2, height*0.7, 200);
+            t2.addColorStop(0,'rgba(60,15,30,0.04)');
+            t2.addColorStop(1,'rgba(0,0,0,0)');
             ctx.fillStyle = t2;
             ctx.fillRect(0, 0, width, height);
 
