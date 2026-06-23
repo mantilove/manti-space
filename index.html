@@ -1,289 +1,1180 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manti Space</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><text x='50%' y='55%' font-size='12' font-family='monospace' font-weight='bold' text-anchor='middle' fill='white' dominant-baseline='middle'>M</text></svg>">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Космос</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #000; overflow: hidden; height: 100vh; width: 100vw; font-family: 'Press Start 2P', monospace; }
-        canvas { display: block; position: fixed; top: 0; left: 0; }
-        #debug {
-            position: fixed; top: 10px; left: 10px; z-index: 10;
-            color: #0f0; font-size: 8px; pointer-events: none;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000000;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #creation-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(100% - 32px);
+            max-width: 400px;
+            background: #111111;
+            border-radius: 20px;
+            padding: 28px 24px 24px;
+            border: 1px solid #1f1f1f;
+            z-index: 10;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #creation-panel.hidden {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.96);
+            pointer-events: none;
+        }
+
+        .panel-icon {
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 4px;
+            display: block;
+            opacity: 0.6;
+        }
+
+        #creation-panel h1 {
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        #creation-panel .subtitle {
+            text-align: center;
+            color: #666666;
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        #creation-panel input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            background: #0a0a0a;
+            color: #ffffff;
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        #creation-panel input:focus {
+            border-color: #444444;
+        }
+
+        #creation-panel input::placeholder {
+            color: #444444;
+        }
+
+        #creation-panel input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .canvas-wrapper {
+            margin: 16px 0 18px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #2a2a2a;
+            background: #0a0a0a;
+            position: relative;
+        }
+
+        .canvas-wrapper canvas {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: #0a0a0a;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .draw-colors {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 8px 0 4px;
+        }
+
+        .draw-colors .dc {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border 0.2s;
+        }
+
+        .draw-colors .dc:hover {
+            border-color: #555555;
+        }
+
+        .draw-colors .dc.active {
+            border-color: #ffffff;
+        }
+
+        .draw-colors .dc.eraser {
+            background: transparent;
+            border-color: #333333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .draw-colors .dc.eraser:hover {
+            border-color: #666;
+        }
+
+        .draw-colors .dc.eraser.active {
+            border-color: #ffffff;
+        }
+
+        .canvas-tools {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 6px 0 2px;
+            flex-wrap: wrap;
+        }
+
+        .canvas-tools button {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            color: #888888;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .canvas-tools button:hover {
+            background: #222222;
+            color: #ffffff;
+        }
+
+        .canvas-tools button.active {
+            border-color: #555555;
+            color: #ffffff;
+        }
+
+        #create-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            color: #ffffff;
+            background: #1a1a1a;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid #2a2a2a;
+            margin-top: 4px;
+        }
+
+        #create-btn:hover {
+            background: #222222;
+        }
+
+        #create-btn:active {
+            transform: scale(0.98);
+        }
+
+        #create-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #universe {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            display: none;
+            cursor: grab;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        #universe:active {
+            cursor: grabbing;
+        }
+
+        #universe.visible {
+            display: block;
+        }
+
+        .star {
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+            will-change: transform, opacity;
+        }
+
+        .dust-particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            will-change: transform;
+            pointer-events: none;
+        }
+
+        /* ===== ПЛАНЕТА С ПОДПИСЬЮ ===== */
+        .planet-wrapper {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            will-change: transform, left, top;
+            pointer-events: none;
+        }
+
+        .planet-wrapper .planet {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            pointer-events: auto;
+            transition: filter 0.2s;
+            flex-shrink: 0;
+        }
+
+        .planet-wrapper .planet:hover {
+            z-index: 10;
+            filter: brightness(1.2);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .planet-wrapper .planet-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 10px;
+            font-weight: 500;
+            margin-top: 4px;
+            text-align: center;
+            max-width: 80px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 0 10px rgba(0,0,0,0.9);
+            letter-spacing: 0.3px;
+            pointer-events: none;
+            background: rgba(0,0,0,0.3);
+            padding: 1px 6px;
+            border-radius: 8px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* ===== КОНТРОЛЫ ===== */
+        #controls {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: none;
+            gap: 6px;
+            background: #111111;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #1f1f1f;
+        }
+
+        #controls.visible {
+            display: flex;
+        }
+
+        #controls button {
+            background: transparent;
+            border: none;
+            color: #888888;
+            padding: 6px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        #controls button:hover {
+            color: #ffffff;
+            background: #1a1a1a;
+        }
+
+        #controls button:active {
+            transform: scale(0.95);
+        }
+
+        #clear-planets {
+            color: #555555 !important;
+        }
+
+        #clear-planets:hover {
+            color: #888888 !important;
+        }
+
+        #info {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 20;
+            display: none;
+            font-size: 12px;
+            color: #555555;
+            font-weight: 500;
+        }
+
+        #info.visible {
+            display: block;
+        }
+
+        #info span {
+            color: #ffffff;
+        }
+
+        #user-info {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 20;
+            display: none;
+            font-size: 12px;
+            color: #444444;
+        }
+
+        #user-info.visible {
+            display: block;
+        }
+
+        #user-info span {
+            color: #888888;
+        }
+
+        #planet-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #planet-popup.active {
+            display: flex;
+        }
+
+        .popup-content {
+            background: #111111;
+            border-radius: 20px;
+            padding: 28px 24px 24px;
+            max-width: 340px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #1f1f1f;
+        }
+
+        .popup-planet {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 14px;
+            border: 1px solid #2a2a2a;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .popup-content h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #ffffff;
+        }
+
+        .popup-creator {
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 14px;
+        }
+
+        .popup-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 18px;
+        }
+
+        .popup-details .detail {
+            color: #444444;
+            font-size: 13px;
+        }
+
+        .popup-details .detail span {
+            color: #888888;
+        }
+
+        .popup-close-btn {
+            background: transparent;
+            border: 1px solid #2a2a2a;
+            color: #888888;
+            padding: 10px 0;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .popup-close-btn:hover {
+            border-color: #444444;
+            color: #ffffff;
+        }
+
+        @media (max-width: 420px) {
+            #creation-panel {
+                padding: 20px 16px 18px;
+                border-radius: 16px;
+            }
+
+            #creation-panel h1 {
+                font-size: 18px;
+            }
+
+            #controls {
+                padding: 6px 10px;
+                gap: 2px;
+                bottom: 16px;
+            }
+
+            #controls button {
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+
+            .popup-content {
+                padding: 20px 16px 18px;
+            }
+
+            .planet-wrapper .planet-label {
+                font-size: 9px;
+                max-width: 60px;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 0;
         }
     </style>
 </head>
 <body>
-    <canvas id="s"></canvas>
-    <div id="debug"></div>
+
+    <div id="creation-panel">
+        <span class="panel-icon">⦿</span>
+        <h1>Создать планету</h1>
+        <p class="subtitle">Нарисуй и отправь в космос</p>
+
+        <div class="input-group">
+            <label>Название</label>
+            <input type="text" id="planet-name" placeholder="Название планеты" maxlength="25" />
+        </div>
+
+        <div class="input-group">
+            <label>Создатель</label>
+            <input type="text" id="creator-name" placeholder="Твоё имя" maxlength="20" disabled />
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="drawCanvas" width="400" height="400"></canvas>
+            <div class="draw-colors" id="drawColors">
+                <div class="dc active" style="background:#ff6b6b" data-color="#ff6b6b"></div>
+                <div class="dc" style="background:#ffd93d" data-color="#ffd93d"></div>
+                <div class="dc" style="background:#6bcb77" data-color="#6bcb77"></div>
+                <div class="dc" style="background:#4d96ff" data-color="#4d96ff"></div>
+                <div class="dc" style="background:#9b59b6" data-color="#9b59b6"></div>
+                <div class="dc" style="background:#ff8a5c" data-color="#ff8a5c"></div>
+                <div class="dc" style="background:#00d2d3" data-color="#00d2d3"></div>
+                <div class="dc" style="background:#f368e0" data-color="#f368e0"></div>
+                <div class="dc eraser" data-color="eraser">⌫</div>
+            </div>
+            <div class="canvas-tools">
+                <button id="clear-canvas">Очистить</button>
+                <button id="undo-canvas">↩ Отменить</button>
+                <button id="brush-size-small" class="active" data-size="4">●</button>
+                <button id="brush-size-medium" data-size="12">●</button>
+                <button id="brush-size-large" data-size="24">●</button>
+            </div>
+        </div>
+
+        <button id="create-btn" disabled>Запустить</button>
+    </div>
+
+    <div id="universe"></div>
+
+    <div id="controls">
+        <button id="zoom-in"><span class="control-icon">+</span></button>
+        <button id="zoom-out"><span class="control-icon">−</span></button>
+        <button id="reset-view">⟲</button>
+        <button id="clear-planets">✕</button>
+    </div>
+
+    <div id="info"><span id="planet-count">0</span></div>
+    <div id="user-info">👤 <span id="tg-username">—</span></div>
+
+    <div id="planet-popup">
+        <div class="popup-content">
+            <div class="popup-planet" id="popup-planet-img"></div>
+            <h2 id="popup-name">Планета</h2>
+            <div class="popup-creator"><span id="popup-creator">Аноним</span></div>
+            <div class="popup-details">
+                <div class="detail">Создана <span id="popup-date">—</span></div>
+                <div class="detail">Размер <span id="popup-size">—</span></div>
+            </div>
+            <button class="popup-close-btn" id="popup-close">Закрыть</button>
+        </div>
+    </div>
 
     <script>
-    (function() {
-        var CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTCOEo_Hwq34yzWBbS801jxHctcX6vk9KOM09zdSANjjEIjwx-AvwjDjx_XyF4znvaXodA7cBqWRRdS/pub?gid=0&single=true&output=csv';
-        var POST_URL = 'https://script.google.com/macros/s/AKfycby-gRHhf0tdoBuY77vDI6K2wc3vorLJvyGZlCfBtjZXCrAUxKui-9bafQ6wqpyJcqtc/exec';
+        // ============================================================
+        //  ИНИЦИАЛИЗАЦИЯ
+        // ============================================================
 
-        var visitorName = 'Гость';
-        var visitorNick = 'Гость';
-        var visitorPhoto = null;
-        var visitorId = 'guest_' + Math.random().toString(36).slice(2, 10);
-        var debugText = '';
-
+        let tgUser = null;
         try {
-            var tg = window.Telegram.WebApp;
-            debugText += 'TG: ' + (tg ? 'ДА' : 'НЕТ') + '\n';
-            if (tg) {
-                tg.expand();
-                debugText += 'initData: ' + (tg.initData ? 'ДА' : 'НЕТ') + '\n';
-                debugText += 'initDataUnsafe: ' + (tg.initDataUnsafe ? 'ДА' : 'НЕТ') + '\n';
-                var u = tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
-                debugText += 'user: ' + (u ? 'ДА' : 'НЕТ') + '\n';
-                if (u) {
-                    visitorId = 'tg_' + u.id;
-                    visitorName = u.first_name || 'Гость';
-                    visitorNick = u.username ? '@' + u.username : visitorName;
-                    visitorPhoto = u.photo_url || null;
-                    debugText += 'name: ' + visitorName + '\n';
-                    debugText += 'nick: ' + visitorNick + '\n';
-                    debugText += 'photo: ' + (visitorPhoto ? 'ДА' : 'НЕТ') + '\n';
+            if (window.Telegram && Telegram.WebApp) {
+                tgUser = Telegram.WebApp.initDataUnsafe?.user || null;
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+            }
+        } catch(e) {}
+
+        const panel = document.getElementById('creation-panel');
+        const universe = document.getElementById('universe');
+        const nameInput = document.getElementById('planet-name');
+        const creatorInput = document.getElementById('creator-name');
+        const createBtn = document.getElementById('create-btn');
+        const controls = document.getElementById('controls');
+        const info = document.getElementById('info');
+        const userInfo = document.getElementById('user-info');
+        const planetCountSpan = document.getElementById('planet-count');
+        const tgUsernameSpan = document.getElementById('tg-username');
+        const popup = document.getElementById('planet-popup');
+
+        if (tgUser) {
+            const name = tgUser.first_name || '';
+            const last = tgUser.last_name || '';
+            const full = (name + ' ' + last).trim() || 'Пользователь';
+            creatorInput.value = full;
+            tgUsernameSpan.textContent = full;
+            userInfo.classList.add('visible');
+        } else {
+            creatorInput.placeholder = 'Не в Telegram';
+            tgUsernameSpan.textContent = 'Гость';
+        }
+
+        // ============================================================
+        //  РИСОВАНИЕ НА ХОЛСТЕ
+        // ============================================================
+
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let currentColor = '#ff6b6b';
+        let brushSize = 4;
+        let drawHistory = [];
+        const MAX_HISTORY = 20;
+
+        function initCanvas() {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, canvas.width/2 - 4, 0, Math.PI * 2);
+            ctx.strokeStyle = '#222222';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            saveHistory();
+        }
+        initCanvas();
+
+        function saveHistory() {
+            drawHistory.push(canvas.toDataURL());
+            if (drawHistory.length > MAX_HISTORY) {
+                drawHistory.shift();
+            }
+        }
+
+        function undoCanvas() {
+            if (drawHistory.length > 1) {
+                drawHistory.pop();
+                const last = drawHistory[drawHistory.length - 1];
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    checkCanvasEmpty();
+                };
+                img.src = last;
+            }
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, canvas.width/2 - 4, 0, Math.PI * 2);
+            ctx.strokeStyle = '#222222';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            saveHistory();
+            checkCanvasEmpty();
+        }
+
+        function checkCanvasEmpty() {
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let hasColor = false;
+            for (let i = 0; i < data.data.length; i += 4) {
+                if (data.data[i] > 10 || data.data[i+1] > 10 || data.data[i+2] > 10) {
+                    hasColor = true;
+                    break;
                 }
             }
-        } catch(e) {
-            debugText += 'ERROR: ' + e.message + '\n';
+            createBtn.disabled = !hasColor;
         }
 
-        document.getElementById('debug').textContent = debugText;
-
-        var canvas = document.getElementById('s');
-        var ctx = canvas.getContext('2d');
-        var width = window.innerWidth;
-        var height = window.innerHeight;
-        canvas.width = width;
-        canvas.height = height;
-
-        var stars = [];
-        var visitors = [];
-
-        for (var i = 0; i < 350; i++) {
-            stars.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                size: Math.random() * 2.5,
-                opacity: Math.random(),
-                speed: Math.random() * 0.008,
-                offset: Math.random() * 100
-            });
-        }
-
-        function createVisitor(data) {
-            var img = null;
-            if (data.photo) {
-                img = new Image();
-                img.src = data.photo;
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX, clientY;
+            
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+                e.preventDefault();
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
             }
+            
             return {
-                id: data.id, name: data.name, nick: data.nick,
-                photo: data.photo, img: img, isMe: data.id === visitorId,
-                x: parseFloat(data.x) || Math.random() * (width - 100) + 50,
-                y: parseFloat(data.y) || Math.random() * (height - 200) + 100,
-                sx: (Math.random() - 0.5) * 0.5,
-                sy: (Math.random() - 0.5) * 0.4,
-                size: data.id === visitorId ? 50 : 22 + Math.random() * 22,
-                lastSeen: parseInt(data.lastSeen) || Date.now(),
-                pulse: Math.random() * 6.28
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
             };
         }
 
-        function drawVisitor(v) {
-            v.x += v.sx;
-            v.y += v.sy;
-            if (v.x < v.size + 10 || v.x > width - v.size - 10) v.sx *= -1;
-            if (v.y < v.size + 10 || v.y > height - v.size - 50) v.sy *= -1;
-
-            var pulse = 1 + Math.sin(Date.now() * 0.003 + v.pulse) * 0.06;
-            var r = v.size * pulse;
-
-            ctx.strokeStyle = v.isMe ? 'rgba(68,170,255,0.25)' : 'rgba(255,255,255,0.06)';
-            ctx.lineWidth = 1;
+        function startDraw(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getCanvasPos(e);
             ctx.beginPath();
-            ctx.arc(v.x, v.y, r + 10, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.strokeStyle = v.isMe ? 'rgba(68,170,255,0.15)' : 'rgba(255,255,255,0.04)';
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.ellipse(v.x, v.y, r + 16, r * 0.2, 0.4, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.fillStyle = 'rgba(0,0,0,0.4)';
-            ctx.beginPath();
-            ctx.arc(v.x + 3, v.y + 3, r, 0, Math.PI * 2);
+            ctx.arc(pos.x, pos.y, brushSize/2, 0, Math.PI * 2);
             ctx.fill();
+            saveHistory();
+        }
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(v.x, v.y, r, 0, Math.PI * 2);
-            ctx.clip();
-
-            if (v.img && v.img.complete && v.img.naturalWidth > 0) {
-                ctx.drawImage(v.img, v.x - r, v.y - r, r * 2, r * 2);
-            } else {
-                var grad = ctx.createRadialGradient(v.x - r*0.3, v.y - r*0.3, r*0.1, v.x, v.y, r);
-                if (v.isMe) {
-                    grad.addColorStop(0,'#fff');
-                    grad.addColorStop(0.4,'#6ab0ff');
-                    grad.addColorStop(1,'#0d2b4a');
-                } else {
-                    grad.addColorStop(0,'#ddd');
-                    grad.addColorStop(0.5,'#888');
-                    grad.addColorStop(1,'#333');
-                }
-                ctx.fillStyle = grad;
-                ctx.fillRect(v.x - r, v.y - r, r*2, r*2);
-                ctx.fillStyle = '#fff';
-                ctx.font = (r*0.7) + 'px "Press Start 2P"';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(v.name.charAt(0).toUpperCase(), v.x, v.y);
-            }
-            ctx.restore();
-
-            if (v.isMe) {
-                var glow = ctx.createRadialGradient(v.x, v.y, r*0.8, v.x, v.y, r*2);
-                glow.addColorStop(0,'rgba(68,170,255,0.3)');
-                glow.addColorStop(1,'rgba(68,170,255,0)');
-                ctx.fillStyle = glow;
+        function draw(e) {
+            e.preventDefault();
+            if (!isDrawing) return;
+            const pos = getCanvasPos(e);
+            
+            if (currentColor === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
-                ctx.arc(v.x, v.y, r*2, 0, Math.PI*2);
+                ctx.arc(pos.x, pos.y, brushSize/1.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalCompositeOperation = 'source-over';
+            } else {
+                ctx.fillStyle = currentColor;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, brushSize/2, 0, Math.PI * 2);
                 ctx.fill();
             }
-
-            ctx.fillStyle = v.isMe ? '#fff' : 'rgba(200,200,200,0.8)';
-            ctx.font = (v.isMe ? 10 : 7) + 'px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.fillText(v.nick, v.x, v.y + r + 16);
-
-            var timeAgo = getTimeAgo(v.lastSeen);
-            ctx.fillStyle = 'rgba(150,150,150,0.5)';
-            ctx.font = '6px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.fillText(timeAgo, v.x, v.y + r + 28);
         }
 
-        function getTimeAgo(ts) {
-            var s = Math.floor((Date.now() - ts) / 1000);
-            if (s < 10) return 'сейчас';
-            if (s < 60) return s + 'с';
-            if (s < 3600) return Math.floor(s/60) + 'м';
-            if (s < 86400) return Math.floor(s/3600) + 'ч';
-            return Math.floor(s/86400) + 'д';
-        }
-
-        function loadVisitors() {
-            fetch(CSV_URL)
-                .then(function(r) { return r.text(); })
-                .then(function(csv) {
-                    var lines = csv.trim().split('\n');
-                    var all = [];
-                    for (var i = 1; i < lines.length; i++) {
-                        var parts = lines[i].split(',');
-                        if (parts.length >= 7) {
-                            all.push({
-                                id: parts[0],
-                                name: parts[1],
-                                nick: parts[2],
-                                photo: parts[3],
-                                x: parts[4],
-                                y: parts[5],
-                                lastSeen: parseInt(parts[6])
-                            });
-                        }
-                    }
-                    var now = Date.now();
-                    var alive = all.filter(function(v) { return now - v.lastSeen < 300000; });
-                    var oldPos = {};
-                    visitors.forEach(function(v) { oldPos[v.id] = { x:v.x, y:v.y, sx:v.sx, sy:v.sy }; });
-                    visitors = [];
-                    alive.forEach(function(v) {
-                        var pos = oldPos[v.id];
-                        if (pos) { v.x = pos.x; v.y = pos.y; }
-                        visitors.push(createVisitor(v));
-                    });
-                    if (!visitors.find(function(v) { return v.id === visitorId; })) {
-                        visitors.push(createVisitor({
-                            id: visitorId, name: visitorName,
-                            nick: visitorNick, photo: visitorPhoto,
-                            lastSeen: Date.now()
-                        }));
-                    }
-                })
-                .catch(function() {});
-        }
-
-        function updateMe() {
-            var me = visitors.find(function(v) { return v.id === visitorId; });
-            if (!me) return;
-
-            fetch(POST_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: visitorId,
-                    name: visitorName,
-                    nick: visitorNick,
-                    photo: visitorPhoto || '',
-                    x: me.x,
-                    y: me.y,
-                    lastSeen: Date.now()
-                })
-            }).catch(function() {});
-        }
-
-        function draw() {
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.fillRect(0, 0, width, height);
-
-            for (var i = 0; i < stars.length; i++) {
-                var s = stars[i];
-                var o = s.opacity * (0.4 + 0.6 * Math.sin(Date.now() * s.speed + s.offset));
-                ctx.fillStyle = 'rgba(255,255,255,' + o + ')';
-                ctx.fillRect(s.x, s.y, s.size, s.size);
+        function endDraw(e) {
+            if (isDrawing) {
+                isDrawing = false;
+                saveHistory();
+                checkCanvasEmpty();
             }
-
-            var t1 = ctx.createRadialGradient(width*0.7, height*0.3, 0, width*0.7, height*0.3, 250);
-            t1.addColorStop(0,'rgba(30,30,80,0.04)');
-            t1.addColorStop(1,'rgba(0,0,0,0)');
-            ctx.fillStyle = t1;
-            ctx.fillRect(0, 0, width, height);
-
-            var t2 = ctx.createRadialGradient(width*0.2, height*0.7, 0, width*0.2, height*0.7, 200);
-            t2.addColorStop(0,'rgba(60,15,30,0.04)');
-            t2.addColorStop(1,'rgba(0,0,0,0)');
-            ctx.fillStyle = t2;
-            ctx.fillRect(0, 0, width, height);
-
-            for (var i = 0; i < visitors.length; i++) {
-                drawVisitor(visitors[i]);
-            }
-
-            requestAnimationFrame(draw);
         }
 
-        loadVisitors();
-        setInterval(loadVisitors, 5000);
-        setInterval(updateMe, 3000);
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', endDraw);
+        canvas.addEventListener('mouseleave', endDraw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', endDraw, { passive: false });
 
-        window.addEventListener('resize', function() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
+        document.querySelectorAll('.draw-colors .dc').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.draw-colors .dc').forEach(d => d.classList.remove('active'));
+                el.classList.add('active');
+                if (el.dataset.color === 'eraser') {
+                    currentColor = 'eraser';
+                } else {
+                    currentColor = el.dataset.color;
+                }
+            });
         });
 
-        draw();
-    })();
+        document.querySelectorAll('#brush-size-small, #brush-size-medium, #brush-size-large').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#brush-size-small, #brush-size-medium, #brush-size-large')
+                    .forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                brushSize = parseInt(btn.dataset.size);
+            });
+        });
+
+        document.getElementById('clear-canvas').addEventListener('click', clearCanvas);
+        document.getElementById('undo-canvas').addEventListener('click', undoCanvas);
+
+        // ============================================================
+        //  КОСМОС — ЗВЁЗДЫ, ПЫЛЬ, АНИМАЦИЯ
+        // ============================================================
+
+        let stars = [];
+        let dustParticles = [];
+        let animationId = null;
+        let planets = [];
+        let scale = 1;
+        let offsetX = 0, offsetY = 0;
+        let isDragging = false;
+        let startX, startY, startOffX, startOffY;
+        const STORAGE_KEY = 'space_planets_draw';
+
+        // ---- Генерация звёзд ----
+        function generateStars() {
+            const count = 250;
+            for (let i = 0; i < count; i++) {
+                const el = document.createElement('div');
+                el.className = 'star';
+                const size = Math.random() * 2 + 0.5;
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                el.style.left = Math.random() * 100 + '%';
+                el.style.top = Math.random() * 100 + '%';
+                el.style.opacity = Math.random() * 0.2 + 0.05;
+                el.style.animationDuration = (Math.random() * 4 + 2) + 's';
+                el.style.animationName = 'twinkle';
+                el.style.animationIterationCount = 'infinite';
+                el.style.animationDirection = 'alternate';
+                universe.appendChild(el);
+                stars.push({
+                    el: el,
+                    baseOpacity: parseFloat(el.style.opacity),
+                    speed: Math.random() * 0.02 + 0.01
+                });
+            }
+        }
+
+        // ---- Генерация космической пыли ----
+        function generateDust() {
+            const count = 80;
+            for (let i = 0; i < count; i++) {
+                const el = document.createElement('div');
+                el.className = 'dust-particle';
+                const size = Math.random() * 120 + 40;
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                el.style.left = Math.random() * 100 + '%';
+                el.style.top = Math.random() * 100 + '%';
+                el.style.opacity = Math.random() * 0.04 + 0.01;
+                el.style.background = 'radial-gradient(ellipse, rgba(255,255,255,0.1), transparent)';
+                universe.appendChild(el);
+                dustParticles.push({
+                    el: el,
+                    x: parseFloat(el.style.left),
+                    y: parseFloat(el.style.top),
+                    speedX: (Math.random() - 0.5) * 0.008,
+                    speedY: (Math.random() - 0.5) * 0.008,
+                    size: size
+                });
+            }
+        }
+
+        // ---- Анимация ----
+        function animateUniverse() {
+            // Мерцание звёзд
+            stars.forEach(star => {
+                const current = parseFloat(star.el.style.opacity);
+                const target = star.baseOpacity + Math.sin(Date.now() * star.speed) * 0.05;
+                star.el.style.opacity = Math.max(0.02, Math.min(0.3, target));
+            });
+
+            // Движение пыли
+            dustParticles.forEach(d => {
+                d.x += d.speedX;
+                d.y += d.speedY;
+                if (d.x > 100) d.x = 0;
+                if (d.x < 0) d.x = 100;
+                if (d.y > 100) d.y = 0;
+                if (d.y < 0) d.y = 100;
+                d.el.style.left = d.x + '%';
+                d.el.style.top = d.y + '%';
+            });
+
+            // Движение планет
+            planets.forEach((p) => {
+                p.angleX = (p.angleX || 0) + (p.speedX || 0.005 + Math.random() * 0.005);
+                p.angleY = (p.angleY || 0) + (p.speedY || 0.005 + Math.random() * 0.005);
+                
+                const ampX = p.ampX || (30 + Math.random() * 80);
+                const ampY = p.ampY || (30 + Math.random() * 80);
+                
+                p.x = p.baseX + Math.sin(p.angleX) * ampX;
+                p.y = p.baseY + Math.cos(p.angleY) * ampY;
+                
+                if (Math.random() < 0.0005) {
+                    p.speedX = 0.003 + Math.random() * 0.008;
+                    p.speedY = 0.003 + Math.random() * 0.008;
+                    p.ampX = 30 + Math.random() * 100;
+                    p.ampY = 30 + Math.random() * 100;
+                }
+            });
+
+            updatePlanetPositions();
+            animationId = requestAnimationFrame(animateUniverse);
+        }
+
+        // ---- Добавляем CSS-анимацию для звёзд ----
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            @keyframes twinkle {
+                0% { opacity: 0.05; }
+                100% { opacity: 0.25; }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // ============================================================
+        //  ПЛАНЕТЫ С ПОДПИСЬЮ
+        // ============================================================
+
+        function createPlanet(name, imageData, size, x, y, creator, date, save = true) {
+            // Создаём wrapper (контейнер для планеты + подпись)
+            const wrapper = document.createElement('div');
+            wrapper.className = 'planet-wrapper';
+            wrapper.style.width = size + 'px';
+
+            // Сама планета
+            const el = document.createElement('div');
+            el.className = 'planet';
+            el.style.width = size + 'px';
+            el.style.height = size + 'px';
+            el.style.backgroundImage = `url(${imageData})`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+
+            // Подпись (имя планеты)
+            const label = document.createElement('div');
+            label.className = 'planet-label';
+            label.textContent = name || 'Планета';
+
+            wrapper.appendChild(el);
+            wrapper.appendChild(label);
+
+            if (x === undefined || y === undefined) {
+                x = (Math.random() - 0.5) * window.innerWidth * 1.2;
+                y = (Math.random() - 0.5) * window.innerHeight * 1.2;
+            }
+
+            const planetData = {
+                wrapper: wrapper,
+                el: el,
+                label: label,
+                name: name || 'Планета',
+                creator: creator || 'Аноним',
+                image: imageData,
+                size: size,
+                x: x,
+                y: y,
+                baseX: x,
+                baseY: y,
+                date: date || new Date().toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                angleX: Math.random() * Math.PI * 2,
+                angleY: Math.random() * Math.PI * 2,
+                speedX: 0.005 + Math.random() * 0.008,
+                speedY: 0.005 + Math.random() * 0.008,
+                ampX: 40 + Math.random() * 120,
+                ampY: 40 + Math.random() * 120
+            };
+
+            // Клик по планете
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showPlanetInfo(planetData);
+            });
+
+            universe.appendChild(wrapper);
+            planets.push(planetData);
+            updatePlanetPositions();
+            updateCounter();
+            if (save) savePlanets();
+            return planetData;
+        }
+
+        function updatePlanetPositions() {
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+            planets.forEach(p => {
+                const screenX = cx + (p.x + offsetX) * scale;
+                const screenY = cy + (p.y + offsetY) * scale;
+                p.wrapper.style.left = (screenX - p.size / 2) + 'px';
+                p.wrapper.style.top = (screenY - p.size / 2 - 14) + 'px';
+                p.wrapper.style.transform = `scale(${scale})`;
+                p.wrapper.style.transformOrigin = 'center center';
+                
+                const margin = 350;
+                const visible = screenX > -margin && screenX < window.innerWidth + margin &&
+                    screenY > -margin && screenY < window.innerHeight + margin;
+                p.wrapper.style.display = visible ? 'flex' : 'none';
+            });
+        }
+
+        function updateCounter() {
+            planetCountSpan.textContent = planets.length;
+        }
+
+        // ============================================================
+        //  ХРАНИЛИЩЕ
+        // ============================================================
+
+        function savePlanets() {
+            const data = planets.map(p => ({
+                name: p.name,
+                creator: p.creator,
+                image: p.image,
+                size: p.size,
+                x: p.baseX,
+                y: p.baseY,
+                date: p.date
+            }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadPlanets() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            try {
+                const data = JSON.parse(raw);
+                data.forEach(p => {
+                    createPlanet(p.name, p.image, p.size, p.x, p.y, p.creator, p.date, false);
+                });
+                if (data.length > 0) {
+                    panel.classList.add('hidden');
+                    universe.classList.add('visible');
+                    controls.classList.add('visible');
+                    info.classList.add('visible');
+                    generateStars();
+                    generateDust();
+                    if (animationId === null) {
+                        animateUniverse();
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // ============================================================
+        //  ПОПАП
+        // ============================================================
+
+        function showPlanetInfo(data) {
+            document.getElementById('popup-planet-img').style.backgroundImage = `url(${data.image})`;
+            document.getElementById('popup-name').textContent = data.name;
+            document.getElementById('popup-creator').textContent = data.creator;
+            document.getElementById('popup-date').textContent = data.date;
+            document.getElementById('popup-size').textContent = data.size + 'px';
+            popup.classList.add('active');
+        }
+
+        document.getElementById('popup-close').addEventListener('click', () => popup.classList.remove('active'));
+        popup.addEventListener('click', (e) => { if (e.target === popup) popup.classList.remove('active'); });
+
+        // ============================================================
+        //  УПРАВЛЕНИЕ
+        // ============================================================
+
+        function zoom(factor) {
+            scale = Math.max(0.2, Math.min(3, scale * factor));
+            updatePlanetPositions();
+        }
+
+        function resetView() {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            updatePlanetPositions();
+        }
+
+        universe.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.planet')) return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startOffX = offsetX;
+            startOffY = offsetY;
+            universe.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = (e.clientX - startX) / scale;
+            const dy = (e.clientY - startY) / scale;
+            offsetX = startOffX + dx;
+            offsetY = startOffY + dy;
+            updatePlanetPositions();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            universe.style.cursor = 'grab';
+        });
+
+        universe.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            zoom(e.deltaY > 0 ? 0.9 : 1.1);
+        }, { passive: false });
+
+        // ============================================================
+        //  СОЗДАНИЕ ПЛАНЕТЫ
+        // ============================================================
+
+        createBtn.addEventListener('click', () => {
+            const name = nameInput.value.trim() || 'Планета';
+            const creator = creatorInput.value.trim() || 'Аноним';
+            const size = 70 + Math.floor(Math.random() * 60);
+            const imageData = canvas.toDataURL('image/png');
+            
+            createPlanet(name, imageData, size, undefined, undefined, creator);
+
+            panel.classList.add('hidden');
+            universe.classList.add('visible');
+            controls.classList.add('visible');
+            info.classList.add('visible');
+            
+            if (!starsGenerated) {
+                generateStars();
+                generateDust();
+                starsGenerated = true;
+            }
+            
+            if (animationId === null) {
+                animateUniverse();
+            }
+
+            clearCanvas();
+            nameInput.value = '';
+        });
+
+        let starsGenerated = false;
+
+        // ============================================================
+        //  КНОПКИ
+        // ============================================================
+
+        document.getElementById('zoom-in').addEventListener('click', () => zoom(1.2));
+        document.getElementById('zoom-out').addEventListener('click', () => zoom(0.8));
+        document.getElementById('reset-view').addEventListener('click', resetView);
+
+        document.getElementById('clear-planets').addEventListener('click', () => {
+            if (planets.length === 0) return;
+            if (confirm('Удалить все планеты?')) {
+                planets.forEach(p => p.wrapper.remove());
+                planets = [];
+                localStorage.removeItem(STORAGE_KEY);
+                updateCounter();
+                updatePlanetPositions();
+            }
+        });
+
+        // ============================================================
+        //  ЗАПУСК
+        // ============================================================
+
+        window.addEventListener('resize', () => {
+            updatePlanetPositions();
+        });
+
+        loadPlanets();
+
+        if (planets.length === 0) {
+            panel.classList.remove('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !panel.classList.contains('hidden') && !createBtn.disabled) {
+                createBtn.click();
+            }
+        });
+
+        setTimeout(checkCanvasEmpty, 100);
+
+        console.log('🚀 Космос с подписями под планетами');
     </script>
 </body>
 </html>
